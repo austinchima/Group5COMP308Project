@@ -30,24 +30,31 @@ JWT_SECRET=your_super_long_jwt_secret_key_here_123456789
 ```
 
 3. community service .env:
+```
 PORT=5002
 MONGO_URI=mongodb://127.0.0.1:27017/community_db
 JWT_SECRET=your_super_long_jwt_secret_key_here_123456789
+```
 
-4. business-event-service .env:
+5. business-event-service .env:
+```
 PORT=5003
 MONGO_URI=mongodb://127.0.0.1:27017/business_events_db
 JWT_SECRET=your_super_long_jwt_secret_key_here_123456789
+```
 
-5. ai-service .env:
+7. ai-service .env:
+```
 PORT=5004
 GEMINI_API_KEY=your_gemini_api_key_here #Need to get a Real Gemini API Key
+```
 
 
 ## A `.env` file under the gateway folder
-
+```
 PORT=4000
 AUTH_SERVICE_URL=http://localhost:5001/graphql
 COMMUNITY_SERVICE_URL=http://localhost:5002/graphql
 BUSINESS_EVENTS_SERVICE_URL=http://localhost:5003/graphql
 AI_SERVICE_URL=http://localhost:5004/graphql
+```
