@@ -23,22 +23,22 @@ View your app in AI Studio: https://ai.studio/apps/5a7f849c-a928-45c7-9709-91b0a
 ## Create a `.env` file under EACH Service:
 
 1. auth-service .env:
-
-PORT=5001
+`PORT=5001
 MONGO_URI=mongodb://127.0.0.1:27017/auth_db
 JWT_SECRET=your_super_long_jwt_secret_key_here_123456789
+`
 
-2. community service .env:
+3. community service .env:
 PORT=5002
 MONGO_URI=mongodb://127.0.0.1:27017/community_db
 JWT_SECRET=your_super_long_jwt_secret_key_here_123456789
 
-3. business-event-service .env:
+4. business-event-service .env:
 PORT=5003
 MONGO_URI=mongodb://127.0.0.1:27017/business_events_db
 JWT_SECRET=your_super_long_jwt_secret_key_here_123456789
 
-4. ai-service .env:
+5. ai-service .env:
 PORT=5004
 GEMINI_API_KEY=your_gemini_api_key_here #Need to get a Real Gemini API Key
 
