@@ -23,6 +23,7 @@ View your app in AI Studio: https://ai.studio/apps/5a7f849c-a928-45c7-9709-91b0a
 ## Create a `.env` file under EACH Service:
 
 1. auth-service .env:
+
 PORT=5001
 MONGO_URI=mongodb://127.0.0.1:27017/auth_db
 JWT_SECRET=your_super_long_jwt_secret_key_here_123456789
