@@ -1,8 +1,6 @@
-node_modules/
-build/
-dist/
-coverage/
-.DS_Store
-*.log
-.env*
-!.env.example
+node_modules
+dist
+.env
+.env.example
+.env.*
+COMP308W25GroupProject_Software_Engineering.docx.md
