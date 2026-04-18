@@ -26,15 +26,15 @@ function LoadingFallback() {
   );
 }
 
-/** Maps each role to the route paths it is allowed to access (beyond /feed & /profile) */
 const ROLE_ROUTES: Record<UserRole, string[]> = {
-  'Resident': ['/help'],
+  Resident: ['/help'],
   'Business Owner': ['/business'],
   'Community Organizer': ['/events'],
 };
 
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem('token'));
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleStorage = () => setToken(localStorage.getItem('token'));
@@ -42,13 +42,17 @@ export default function App() {
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
-  const navigate = useNavigate();
+  const handleAuth = () => {
+    const newToken = localStorage.getItem('token');
+    setToken(newToken);
+    navigate('/feed', { replace: true });
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setToken(null);
-    navigate('/auth');
+    navigate('/auth', { replace: true });
   };
 
   if (!token) {
@@ -57,8 +61,8 @@ export default function App() {
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
             <Route path="/" element={<Landing />} />
-            <Route path="/auth" element={<RemoteAuth onAuth={() => setToken(localStorage.getItem('token'))} />} />
-            <Route path="*" element={<NotFound />} />
+            <Route path="/auth" element={<RemoteAuth onAuth={handleAuth} />} />
+            <Route path="*" element={<Navigate to="/auth" replace />} />
           </Routes>
         </Suspense>
       </ErrorBoundary>
@@ -74,23 +78,14 @@ export default function App() {
       <ErrorBoundary>
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
-            {/* Default redirect → Feed (accessible to everyone) */}
             <Route path="/" element={<Navigate to="/feed" replace />} />
             <Route path="/feed" element={<RemoteFeed />} />
             <Route path="/profile" element={<RemoteProfile onLogout={handleLogout} />} />
 
-            {/* Role-gated routes — only rendered when the user's role allows */}
-            {allowed.includes('/help') && (
-              <Route path="/help" element={<RemoteHelp />} />
-            )}
-            {allowed.includes('/business') && (
-              <Route path="/business" element={<RemoteBusiness />} />
-            )}
-            {allowed.includes('/events') && (
-              <Route path="/events" element={<RemoteEvents />} />
-            )}
+            {allowed.includes('/help') && <Route path="/help" element={<RemoteHelp />} />}
+            {allowed.includes('/business') && <Route path="/business" element={<RemoteBusiness />} />}
+            {allowed.includes('/events') && <Route path="/events" element={<RemoteEvents />} />}
 
-            {/* Catch-all: unauthorized paths → redirect to feed */}
             <Route path="*" element={<Navigate to="/feed" replace />} />
           </Routes>
         </Suspense>

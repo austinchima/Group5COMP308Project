@@ -37,8 +37,11 @@ const typeDefs = gql`
     organizerName: String!
     title: String!
     description: String!
-    location: String
+    category: String
     date: String!
+    time: String
+    location: String
+    capacity: Int
     volunteers: [Volunteer]
     suggestedBestTime: String
     createdAt: String
@@ -51,14 +54,51 @@ const typeDefs = gql`
   }
 
   type Mutation {
-    createBusiness(name: String!, description: String!, category: String, location: String, imageUrl: String, deals: [String]): Business
-    addReview(businessId: ID!, rating: Int!, comment: String!): Review
-    updateReviewSentiment(reviewId: ID!, sentiment: String!): Review
-    respondToReview(reviewId: ID!, response: String!): Review
+    createBusiness(
+      name: String!
+      description: String!
+      category: String
+      location: String
+      imageUrl: String
+      deals: [String]
+    ): Business
 
-    createEvent(title: String!, description: String!, location: String, date: String!): Event
-    updateEventSuggestedTime(eventId: ID!, suggestedBestTime: String!): Event
-    assignVolunteer(eventId: ID!, userId: String!, userName: String!): Event
+    addReview(
+      businessId: ID!
+      rating: Int!
+      comment: String!
+    ): Review
+
+    updateReviewSentiment(
+      reviewId: ID!
+      sentiment: String!
+    ): Review
+
+    respondToReview(
+      reviewId: ID!
+      response: String!
+    ): Review
+
+    createEvent(
+      title: String!
+      description: String!
+      category: String
+      date: String!
+      time: String
+      location: String
+      capacity: Int
+    ): Event
+
+    updateEventSuggestedTime(
+      eventId: ID!
+      suggestedBestTime: String!
+    ): Event
+
+    assignVolunteer(
+      eventId: ID!
+      userId: String!
+      userName: String!
+    ): Event
   }
 `;
 

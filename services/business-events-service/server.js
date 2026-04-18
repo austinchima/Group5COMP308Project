@@ -12,10 +12,21 @@ dotenv.config();
 await connectDB();
 
 const app = express();
-app.use(cors());
+
+app.use(
+  cors({
+    origin: ['http://localhost:5176', 'http://localhost:5173'],
+    credentials: true
+  })
+);
+
 app.use(express.json());
 
-const server = new ApolloServer({ typeDefs, resolvers });
+const server = new ApolloServer({
+  typeDefs,
+  resolvers
+});
+
 await server.start();
 
 app.use(
@@ -34,6 +45,7 @@ app.get('/', (req, res) => {
 });
 
 const PORT = process.env.PORT || 5003;
+
 app.listen(PORT, () => {
   console.log(`Business Events service running on port ${PORT}`);
 });

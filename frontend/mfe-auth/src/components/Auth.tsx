@@ -23,7 +23,7 @@ interface AuthPayload {
   };
 }
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/graphql';
+const API_URL = 'http://localhost:4000/graphql';
 
 const ROLE_TO_BACKEND: Record<DisplayRole, BackendRole> = {
   Resident: 'RESIDENT',

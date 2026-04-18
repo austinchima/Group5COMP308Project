@@ -6,6 +6,25 @@ export interface AuthUser {
   role: UserRole;
 }
 
+function normalizeRole(role: string | undefined | null): UserRole {
+  switch (role) {
+    case 'RESIDENT':
+    case 'Resident':
+      return 'Resident';
+
+    case 'BUSINESS_OWNER':
+    case 'Business Owner':
+      return 'Business Owner';
+
+    case 'COMMUNITY_ORGANIZER':
+    case 'Community Organizer':
+      return 'Community Organizer';
+
+    default:
+      return 'Resident';
+  }
+}
+
 /**
  * Reads the current authenticated user from localStorage.
  * Returns null when no user is logged in.
@@ -14,8 +33,13 @@ export function getAuthUser(): AuthUser | null {
   try {
     const raw = localStorage.getItem('user');
     if (!raw) return null;
+
     const parsed = JSON.parse(raw);
-    return parsed as AuthUser;
+
+    return {
+      ...parsed,
+      role: normalizeRole(parsed?.role),
+    } as AuthUser;
   } catch {
     return null;
   }
@@ -33,15 +57,9 @@ const SHARED_NAV: NavItem[] = [
 ];
 
 const ROLE_NAV: Record<UserRole, NavItem[]> = {
-  'Resident': [
-    { to: '/help', label: 'Help', icon: 'handshake' },
-  ],
-  'Business Owner': [
-    { to: '/business', label: 'Business', icon: 'storefront' },
-  ],
-  'Community Organizer': [
-    { to: '/events', label: 'Events', icon: 'event' },
-  ],
+  Resident: [{ to: '/help', label: 'Help', icon: 'handshake' }],
+  'Business Owner': [{ to: '/business', label: 'Business', icon: 'storefront' }],
+  'Community Organizer': [{ to: '/events', label: 'Events', icon: 'event' }],
 };
 
 const PROFILE_NAV: NavItem = { to: '/profile', label: 'Profile', icon: 'person' };
