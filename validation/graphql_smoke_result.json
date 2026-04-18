@@ -1,0 +1,56 @@
+{
+  "registered_user": {
+    "id": "69e301460763437fb6d1f25b",
+    "name": "James Hu",
+    "email": "james.integration.1776484678@example.com",
+    "role": "RESIDENT"
+  },
+  "created_post": {
+    "id": "69e301466d95e736b45355dd",
+    "title": "Neighborhood Cleanup",
+    "content": "We are organizing a cleanup this Saturday at the park.",
+    "summary": "",
+    "tags": [
+      "News"
+    ],
+    "authorName": "James Hu",
+    "comments": []
+  },
+  "updated_summary": {
+    "id": "69e301466d95e736b45355dd",
+    "summary": "Summary could not be generated."
+  },
+  "comment_count": 1,
+  "posts_snapshot": [
+    {
+      "id": "69e301466d95e736b45355dd",
+      "title": "Neighborhood Cleanup",
+      "summary": "Summary could not be generated.",
+      "tags": [
+        "News"
+      ],
+      "authorName": "James Hu",
+      "comments": [
+        {
+          "userName": "James Hu",
+          "text": "Count me in for Saturday."
+        }
+      ]
+    },
+    {
+      "id": "69e300866d95e736b45355da",
+      "title": "Neighborhood Cleanup",
+      "summary": "Summary could not be generated.",
+      "tags": [
+        "News"
+      ],
+      "authorName": "James Hu",
+      "comments": [
+        {
+          "userName": "James Hu",
+          "text": "Count me in for Saturday."
+        }
+      ]
+    }
+  ]
+}

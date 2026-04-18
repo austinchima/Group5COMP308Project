@@ -20,17 +20,29 @@ const serviceUrls = {
   auth: process.env.AUTH_SERVICE_URL,
   community: process.env.COMMUNITY_SERVICE_URL,
   businessEvents: process.env.BUSINESS_EVENTS_SERVICE_URL,
-  ai: process.env.AI_SERVICE_URL
+  ai: process.env.AI_SERVICE_URL,
 };
 
 async function makeSubschema(endpoint) {
-  const executor = buildHTTPExecutor({
-    endpoint
+  const rawExecutor = buildHTTPExecutor({
+    endpoint,
   });
 
   return {
-    schema: await schemaFromExecutor(executor),
-    executor
+    schema: await schemaFromExecutor(rawExecutor),
+    executor: (request) =>
+      rawExecutor({
+        ...request,
+        extensions: {
+          ...(request.extensions ?? {}),
+          headers: {
+            ...(request.extensions?.headers ?? {}),
+            ...(request.context?.authorization
+              ? { authorization: request.context.authorization }
+              : {}),
+          },
+        },
+      }),
   };
 }
 
@@ -42,16 +54,11 @@ async function startGateway() {
     const aiSubschema = await makeSubschema(serviceUrls.ai);
 
     const gatewaySchema = stitchSchemas({
-      subschemas: [
-        authSubschema,
-        communitySubschema,
-        businessSubschema,
-        aiSubschema
-      ]
+      subschemas: [authSubschema, communitySubschema, businessSubschema, aiSubschema],
     });
 
     const server = new ApolloServer({
-      schema: gatewaySchema
+      schema: gatewaySchema,
     });
 
     await server.start();
@@ -60,11 +67,18 @@ async function startGateway() {
       res.json({
         message: 'Community AI Gateway is running',
         graphql: `http://localhost:${PORT}/graphql`,
-        services: serviceUrls
+        services: serviceUrls,
       });
     });
 
-    app.use('/graphql', expressMiddleware(server));
+    app.use(
+      '/graphql',
+      expressMiddleware(server, {
+        context: async ({ req }) => ({
+          authorization: req.headers.authorization || '',
+        }),
+      }),
+    );
 
     app.listen(PORT, () => {
       console.log(`Gateway running on port ${PORT}`);

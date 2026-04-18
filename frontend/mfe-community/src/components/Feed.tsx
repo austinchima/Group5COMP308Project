@@ -1,12 +1,147 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import CreatePostModal from './CreatePostModal.tsx';
 import CommentSection from './CommentSection.tsx';
 
 type PostType = 'News' | 'Discussion' | 'Emergency';
 type FilterType = 'All' | PostType;
 
-/** Returns Tailwind classes for the type badge based on post type */
-function typeTagClasses(type: string): string {
+interface BackendComment {
+  id?: string;
+  userName: string;
+  text: string;
+  createdAt?: string;
+}
+
+interface BackendPost {
+  id: string;
+  authorName: string;
+  title: string;
+  content: string;
+  summary?: string | null;
+  tags?: string[] | null;
+  createdAt?: string;
+  comments?: BackendComment[] | null;
+}
+
+interface FeedComment {
+  id: string;
+  author: string;
+  content: string;
+  time: string;
+}
+
+interface FeedPost {
+  id: string;
+  author: string;
+  type: PostType;
+  title: string;
+  content: string;
+  summary: string;
+  time: string;
+  comments: FeedComment[];
+}
+
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/graphql';
+const FILTERS: FilterType[] = ['All', 'News', 'Discussion', 'Emergency'];
+
+const POSTS_QUERY = `
+  query GetPosts {
+    posts {
+      id
+      authorName
+      title
+      content
+      summary
+      tags
+      createdAt
+      comments {
+        id
+        userName
+        text
+        createdAt
+      }
+    }
+  }
+`;
+
+const CREATE_POST_MUTATION = `
+  mutation CreatePost($title: String!, $content: String!, $tags: [String]) {
+    createPost(title: $title, content: $content, tags: $tags) {
+      id
+      authorName
+      title
+      content
+      summary
+      tags
+      createdAt
+      comments {
+        id
+        userName
+        text
+        createdAt
+      }
+    }
+  }
+`;
+
+const ADD_COMMENT_MUTATION = `
+  mutation AddComment($postId: ID!, $text: String!) {
+    addComment(postId: $postId, text: $text) {
+      id
+      comments {
+        id
+        userName
+        text
+        createdAt
+      }
+    }
+  }
+`;
+
+const SUMMARIZE_DISCUSSION_MUTATION = `
+  mutation SummarizeDiscussion($text: String!) {
+    summarizeDiscussion(text: $text)
+  }
+`;
+
+const UPDATE_SUMMARY_MUTATION = `
+  mutation UpdatePostSummary($postId: ID!, $summary: String!) {
+    updatePostSummary(postId: $postId, summary: $summary) {
+      id
+      summary
+    }
+  }
+`;
+
+async function graphqlRequest<T>(query: string, variables: Record<string, unknown> = {}, requiresAuth = false) {
+  const token = localStorage.getItem('token');
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  if (requiresAuth && token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(API_URL, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ query, variables }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Request failed with status ${response.status}`);
+  }
+
+  const payload = await response.json();
+  if (payload.errors?.length) {
+    throw new Error(payload.errors[0].message || 'GraphQL request failed.');
+  }
+
+  return payload.data as T;
+}
+
+function typeTagClasses(type: PostType): string {
   switch (type) {
     case 'News':
       return 'bg-blue-100 text-blue-800';
@@ -19,71 +154,188 @@ function typeTagClasses(type: string): string {
   }
 }
 
-/** Returns the icon name for each post type */
-function typeIcon(type: string): string {
+function typeIcon(type: PostType): string {
   switch (type) {
-    case 'News':        return 'newspaper';
-    case 'Discussion':  return 'forum';
-    case 'Emergency':   return 'warning';
-    default:            return 'article';
+    case 'News':
+      return 'newspaper';
+    case 'Discussion':
+      return 'forum';
+    case 'Emergency':
+      return 'warning';
+    default:
+      return 'article';
   }
 }
-
-const FILTERS: FilterType[] = ['All', 'News', 'Discussion', 'Emergency'];
 
 const filterButtonBase =
   'flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-bold transition-all duration-200';
 
 function filterActiveClass(filter: FilterType): string {
   switch (filter) {
-    case 'News':       return 'bg-blue-600 text-white shadow-md shadow-blue-200';
-    case 'Discussion': return 'bg-amber-500 text-white shadow-md shadow-amber-200';
-    case 'Emergency':  return 'bg-red-600 text-white shadow-md shadow-red-200';
-    default:           return 'bg-emerald-800 text-white shadow-md shadow-emerald-200';
+    case 'News':
+      return 'bg-blue-600 text-white shadow-md shadow-blue-200';
+    case 'Discussion':
+      return 'bg-amber-500 text-white shadow-md shadow-amber-200';
+    case 'Emergency':
+      return 'bg-red-600 text-white shadow-md shadow-red-200';
+    default:
+      return 'bg-emerald-800 text-white shadow-md shadow-emerald-200';
   }
 }
 
 const filterInactiveClass = 'bg-surface-container-highest text-on-surface-variant hover:bg-surface-container';
 
+function getCurrentUserName() {
+  try {
+    const raw = localStorage.getItem('user');
+    if (!raw) return 'You';
+    const parsed = JSON.parse(raw) as { name?: string };
+    return parsed.name?.trim() || 'You';
+  } catch {
+    return 'You';
+  }
+}
+
+function formatRelativeTime(dateString?: string) {
+  if (!dateString) return 'Just now';
+
+  const created = new Date(dateString).getTime();
+  if (Number.isNaN(created)) return 'Just now';
+
+  const diffMs = Date.now() - created;
+  const diffMinutes = Math.max(1, Math.floor(diffMs / 60000));
+
+  if (diffMinutes < 60) {
+    return `${diffMinutes} min ago`;
+  }
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) {
+    return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+  }
+
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+}
+
+function inferType(tags?: string[] | null): PostType {
+  const normalized = (tags ?? []).map((tag) => tag.toLowerCase());
+  if (normalized.includes('emergency')) return 'Emergency';
+  if (normalized.includes('news')) return 'News';
+  return 'Discussion';
+}
+
+function mapComment(comment: BackendComment, index: number): FeedComment {
+  return {
+    id: comment.id ?? `${comment.userName}-${index}`,
+    author: comment.userName,
+    content: comment.text,
+    time: formatRelativeTime(comment.createdAt),
+  };
+}
+
+function mapPost(post: BackendPost): FeedPost {
+  return {
+    id: post.id,
+    author: post.authorName,
+    type: inferType(post.tags),
+    title: post.title,
+    content: post.content,
+    summary: post.summary?.trim() ?? '',
+    time: formatRelativeTime(post.createdAt),
+    comments: (post.comments ?? []).map(mapComment),
+  };
+}
+
 export default function Feed() {
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [activeFilter, setActiveFilter] = useState<FilterType>('All');
-  const [posts, setPosts] = useState([
-    {
-      id: 1,
-      author: 'Sarah Jenkins',
-      type: 'News' as PostType,
-      title: 'New Community Garden Opening',
-      content: 'We are thrilled to announce the opening of the new community garden on 5th street. Come join us this weekend for the opening ceremony!',
-      summary: 'A new community garden is opening on 5th street this weekend.',
-      time: '2 hours ago',
-    },
-    {
-      id: 2,
-      author: 'Mike Ross',
-      type: 'Discussion' as PostType,
-      title: 'Thoughts on the new parking rules?',
-      content: 'Has anyone seen the new parking rules posted downtown? I feel like they are a bit too restrictive during the weekends. What does everyone else think?',
-      summary: 'Discussion about the new downtown parking rules being too restrictive on weekends.',
-      time: '5 hours ago',
-    },
-  ]);
+  const [posts, setPosts] = useState<FeedPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const currentUserName = useMemo(() => getCurrentUserName(), []);
+  const currentUserInitial = currentUserName.charAt(0).toUpperCase();
 
-  const handleNewPost = (post: { title: string; content: string; type: string }) => {
-    setPosts([{
-      id: Date.now(),
-      author: 'You',
-      type: post.type as PostType,
-      title: post.title,
-      content: post.content,
-      summary: `AI-generated summary: ${post.content.slice(0, 80)}...`,
-      time: 'Just now',
-    }, ...posts]);
+  useEffect(() => {
+    const loadPosts = async () => {
+      setLoading(true);
+      setError('');
+
+      try {
+        const data = await graphqlRequest<{ posts: BackendPost[] }>(POSTS_QUERY);
+        setPosts(data.posts.map(mapPost));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Could not load the feed.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void loadPosts();
+  }, []);
+
+  const refreshPostSummary = async (postId: string, text: string) => {
+    try {
+      const summaryData = await graphqlRequest<{ summarizeDiscussion: string }>(SUMMARIZE_DISCUSSION_MUTATION, {
+        text,
+      });
+
+      const summary = summaryData.summarizeDiscussion?.trim();
+      if (!summary) return;
+
+      await graphqlRequest(UPDATE_SUMMARY_MUTATION, { postId, summary }, true);
+      setPosts((currentPosts) =>
+        currentPosts.map((post) =>
+          post.id === postId
+            ? {
+                ...post,
+                summary,
+              }
+            : post,
+        ),
+      );
+    } catch {
+      // Leave the post visible even if AI enrichment is unavailable.
+    }
   };
 
-  const visiblePosts = activeFilter === 'All'
-    ? posts
-    : posts.filter(p => p.type === activeFilter);
+  const handleNewPost = async (post: { title: string; content: string; type: string }) => {
+    const data = await graphqlRequest<{ createPost: BackendPost }>(
+      CREATE_POST_MUTATION,
+      {
+        title: post.title,
+        content: post.content,
+        tags: [post.type],
+      },
+      true,
+    );
+
+    const createdPost = mapPost(data.createPost);
+    setPosts((currentPosts) => [createdPost, ...currentPosts]);
+    void refreshPostSummary(createdPost.id, post.content);
+  };
+
+  const handleAddComment = async (postId: string, text: string) => {
+    const data = await graphqlRequest<{ addComment: { id: string; comments: BackendComment[] } }>(
+      ADD_COMMENT_MUTATION,
+      { postId, text },
+      true,
+    );
+
+    setPosts((currentPosts) =>
+      currentPosts.map((post) =>
+        post.id === postId
+          ? {
+              ...post,
+              comments: data.addComment.comments.map(mapComment),
+            }
+          : post,
+      ),
+    );
+  };
+
+  const visiblePosts =
+    activeFilter === 'All' ? posts : posts.filter((post) => post.type === activeFilter);
 
   return (
     <>
@@ -91,7 +343,9 @@ export default function Feed() {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
             <h1 className="font-headline font-extrabold text-5xl tracking-tight text-on-surface mb-2">Community Feed</h1>
-            <p className="text-on-surface-variant max-w-xl text-lg">Stay updated with local news and join neighborhood discussions.</p>
+            <p className="text-on-surface-variant max-w-xl text-lg">
+              Stay updated with local news and join neighborhood discussions through the live GraphQL community feed.
+            </p>
           </div>
           <button
             onClick={() => setShowCreatePost(true)}
@@ -102,18 +356,22 @@ export default function Feed() {
         </div>
       </header>
 
-      {/* Filter bar */}
+      {error && (
+        <div className="mb-6 p-4 bg-error-container/10 border border-error/20 rounded-lg text-error text-sm font-medium flex items-center gap-2 max-w-3xl">
+          <span className="material-symbols-outlined text-sm">error</span>
+          {error}
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center gap-2 mb-8">
         <span className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mr-1">Filter:</span>
-        {FILTERS.map(filter => (
+        {FILTERS.map((filter) => (
           <button
             key={filter}
             onClick={() => setActiveFilter(filter)}
             className={`${filterButtonBase} ${activeFilter === filter ? filterActiveClass(filter) : filterInactiveClass}`}
           >
-            {filter !== 'All' && (
-              <span className="material-symbols-outlined text-[14px]">{typeIcon(filter)}</span>
-            )}
+            {filter !== 'All' && <span className="material-symbols-outlined text-[14px]">{typeIcon(filter)}</span>}
             {filter}
           </button>
         ))}
@@ -125,16 +383,21 @@ export default function Feed() {
       </div>
 
       <div className="space-y-6 max-w-3xl">
-        {visiblePosts.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-16 text-on-surface-variant">
+            <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="font-bold text-lg">Loading live community posts…</p>
+          </div>
+        ) : visiblePosts.length === 0 ? (
           <div className="text-center py-16 text-on-surface-variant">
             <span className="material-symbols-outlined text-5xl mb-3 block opacity-40">inbox</span>
             <p className="font-bold text-lg">No {activeFilter} posts yet.</p>
             <p className="text-sm mt-1">Be the first to post!</p>
           </div>
         ) : (
-          visiblePosts.map(post => (
+          visiblePosts.map((post) => (
             <div key={post.id} className="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-on-surface/5 transition-all hover:shadow-md">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-4 gap-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-primary font-bold">
                     {post.author.charAt(0)}
@@ -144,12 +407,12 @@ export default function Feed() {
                     <p className="text-xs text-on-surface-variant">{post.time}</p>
                   </div>
                 </div>
-                {/* Color-coded type badge */}
                 <span className={`inline-flex items-center gap-1 px-3 py-1 text-xs font-bold rounded-full ${typeTagClasses(post.type)}`}>
                   <span className="material-symbols-outlined text-[13px]">{typeIcon(post.type)}</span>
                   {post.type}
                 </span>
               </div>
+
               <h3 className="font-headline text-2xl font-bold mb-2">{post.title}</h3>
               <p className="text-on-surface-variant mb-4">{post.content}</p>
 
@@ -170,7 +433,11 @@ export default function Feed() {
                 </button>
               </div>
 
-              <CommentSection postId={post.id} />
+              <CommentSection
+                comments={post.comments}
+                currentUserInitial={currentUserInitial}
+                onSubmit={(text) => handleAddComment(post.id, text)}
+              />
             </div>
           ))
         )}

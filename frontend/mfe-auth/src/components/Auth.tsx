@@ -1,8 +1,136 @@
 import React, { useState } from 'react';
 
+type DisplayRole = 'Resident' | 'Business Owner' | 'Community Organizer';
+type BackendRole = 'RESIDENT' | 'BUSINESS_OWNER' | 'COMMUNITY_ORGANIZER';
+
+interface AuthUser {
+  name: string;
+  email: string;
+  role: DisplayRole;
+  location?: string;
+  interests?: string[];
+}
+
+interface AuthPayload {
+  token: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: BackendRole;
+    location?: string | null;
+    interests?: string[] | null;
+  };
+}
+
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/graphql';
+
+const ROLE_TO_BACKEND: Record<DisplayRole, BackendRole> = {
+  Resident: 'RESIDENT',
+  'Business Owner': 'BUSINESS_OWNER',
+  'Community Organizer': 'COMMUNITY_ORGANIZER',
+};
+
+const ROLE_FROM_BACKEND: Record<BackendRole, DisplayRole> = {
+  RESIDENT: 'Resident',
+  BUSINESS_OWNER: 'Business Owner',
+  COMMUNITY_ORGANIZER: 'Community Organizer',
+};
+
+async function graphqlRequest<T>(query: string, variables: Record<string, unknown>) {
+  const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ query, variables }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Request failed with status ${response.status}`);
+  }
+
+  const payload = await response.json();
+
+  if (payload.errors?.length) {
+    throw new Error(payload.errors[0].message || 'Authentication request failed.');
+  }
+
+  return payload.data as T;
+}
+
+function persistAuth(payload: AuthPayload) {
+  const storedUser: AuthUser = {
+    name: payload.user.name,
+    email: payload.user.email,
+    role: ROLE_FROM_BACKEND[payload.user.role],
+    location: payload.user.location ?? '',
+    interests: payload.user.interests ?? [],
+  };
+
+  localStorage.setItem('token', payload.token);
+  localStorage.setItem('user', JSON.stringify(storedUser));
+}
+
+const LOGIN_MUTATION = `
+  mutation Login($email: String!, $password: String!) {
+    login(email: $email, password: $password) {
+      token
+      user {
+        id
+        name
+        email
+        role
+        location
+        interests
+      }
+    }
+  }
+`;
+
+const REGISTER_MUTATION = `
+  mutation Register(
+    $name: String!
+    $email: String!
+    $password: String!
+    $role: Role!
+    $location: String
+    $interests: [String]
+  ) {
+    register(
+      name: $name
+      email: $email
+      password: $password
+      role: $role
+      location: $location
+      interests: $interests
+    ) {
+      token
+      user {
+        id
+        name
+        email
+        role
+        location
+        interests
+      }
+    }
+  }
+`;
+
 export default function Auth({ onAuth }: { onAuth: () => void }) {
   const [isLogin, setIsLogin] = useState(true);
-  const [authForm, setAuthForm] = useState({ name: '', email: '', password: '', role: 'Resident' });
+  const [authForm, setAuthForm] = useState<{
+    name: string;
+    email: string;
+    password: string;
+    role: DisplayRole;
+  }>({
+    name: '',
+    email: '',
+    password: '',
+    role: 'Resident',
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -28,18 +156,33 @@ export default function Auth({ onAuth }: { onAuth: () => void }) {
     if (!validate()) return;
 
     setLoading(true);
-    // Simulate API delay — will be replaced with GraphQL mutation
-    await new Promise(r => setTimeout(r, 800));
 
-    // Mock authentication — stores token
-    localStorage.setItem('token', 'mock-jwt-token');
-    localStorage.setItem('user', JSON.stringify({
-      name: isLogin ? 'John Doe' : authForm.name,
-      email: authForm.email,
-      role: authForm.role,
-    }));
-    setLoading(false);
-    onAuth();
+    try {
+      if (isLogin) {
+        const data = await graphqlRequest<{ login: AuthPayload }>(LOGIN_MUTATION, {
+          email: authForm.email.trim(),
+          password: authForm.password,
+        });
+        persistAuth(data.login);
+      } else {
+        const data = await graphqlRequest<{ register: AuthPayload }>(REGISTER_MUTATION, {
+          name: authForm.name.trim(),
+          email: authForm.email.trim(),
+          password: authForm.password,
+          role: ROLE_TO_BACKEND[authForm.role],
+          location: null,
+          interests: [],
+        });
+        persistAuth(data.register);
+      }
+
+      onAuth();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Authentication failed.';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -49,7 +192,7 @@ export default function Auth({ onAuth }: { onAuth: () => void }) {
         <h2 className="font-headline text-xl font-bold mb-6 text-center text-on-surface-variant">
           {isLogin ? 'Welcome Back' : 'Join the Community'}
         </h2>
-        
+
         {error && (
           <div className="mb-4 p-3 bg-error-container/10 border border-error/20 rounded-lg text-error text-sm font-medium flex items-center gap-2">
             <span className="material-symbols-outlined text-sm">error</span>
@@ -61,45 +204,45 @@ export default function Auth({ onAuth }: { onAuth: () => void }) {
           {!isLogin && (
             <div>
               <label className="block text-sm font-bold mb-1">Name</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={authForm.name}
-                onChange={e => setAuthForm({...authForm, name: e.target.value})}
-                className="w-full bg-surface-container-highest px-4 py-2 rounded-sm border-none focus:ring-2 focus:ring-primary/40 outline-none" 
-                placeholder="Your name" 
+                onChange={(e) => setAuthForm({ ...authForm, name: e.target.value })}
+                className="w-full bg-surface-container-highest px-4 py-2 rounded-sm border-none focus:ring-2 focus:ring-primary/40 outline-none"
+                placeholder="Your name"
                 required={!isLogin}
               />
             </div>
           )}
           <div>
             <label className="block text-sm font-bold mb-1">Email</label>
-            <input 
-              type="email" 
+            <input
+              type="email"
               value={authForm.email}
-              onChange={e => setAuthForm({...authForm, email: e.target.value})}
-              className="w-full bg-surface-container-highest px-4 py-2 rounded-sm border-none focus:ring-2 focus:ring-primary/40 outline-none" 
-              placeholder="you@example.com" 
+              onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })}
+              className="w-full bg-surface-container-highest px-4 py-2 rounded-sm border-none focus:ring-2 focus:ring-primary/40 outline-none"
+              placeholder="you@example.com"
               required
             />
           </div>
           <div>
             <label className="block text-sm font-bold mb-1">Password</label>
-            <input 
-              type="password" 
+            <input
+              type="password"
               value={authForm.password}
-              onChange={e => setAuthForm({...authForm, password: e.target.value})}
-              className="w-full bg-surface-container-highest px-4 py-2 rounded-sm border-none focus:ring-2 focus:ring-primary/40 outline-none" 
-              placeholder="••••••••" 
+              onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
+              className="w-full bg-surface-container-highest px-4 py-2 rounded-sm border-none focus:ring-2 focus:ring-primary/40 outline-none"
+              placeholder="••••••••"
               required
             />
           </div>
-          
+
           {!isLogin && (
             <div>
               <label className="block text-sm font-bold mb-1">Role</label>
-              <select 
+              <select
                 value={authForm.role}
-                onChange={e => setAuthForm({...authForm, role: e.target.value})}
+                onChange={(e) => setAuthForm({ ...authForm, role: e.target.value as DisplayRole })}
                 className="w-full bg-surface-container-highest px-4 py-2 rounded-sm border-none focus:ring-2 focus:ring-primary/40 outline-none"
               >
                 <option value="Resident">Resident</option>
@@ -109,8 +252,13 @@ export default function Auth({ onAuth }: { onAuth: () => void }) {
             </div>
           )}
 
-          <button 
-            type="submit" 
+          <div className="bg-surface-container-low p-4 rounded-lg flex items-start gap-3 text-sm text-on-surface-variant">
+            <span className="material-symbols-outlined text-tertiary mt-0.5">cloud_sync</span>
+            <p>This screen now connects to the live GraphQL authentication flow whenever the backend gateway is running.</p>
+          </div>
+
+          <button
+            type="submit"
             disabled={loading}
             className="w-full bg-gradient-to-r from-primary to-primary-dim text-on-primary py-3 rounded-full font-bold shadow-lg shadow-primary/20 active:scale-95 duration-200 mt-6 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
@@ -118,10 +266,13 @@ export default function Auth({ onAuth }: { onAuth: () => void }) {
             {isLogin ? 'Sign In' : 'Create Account'}
           </button>
         </form>
-        
+
         <div className="mt-6 text-center">
-          <button 
-            onClick={() => { setIsLogin(!isLogin); setError(''); }}
+          <button
+            onClick={() => {
+              setIsLogin(!isLogin);
+              setError('');
+            }}
             className="text-sm text-primary font-bold hover:underline"
             type="button"
           >
