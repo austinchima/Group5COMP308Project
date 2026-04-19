@@ -27,8 +27,8 @@ function LoadingFallback() {
 }
 
 const ROLE_ROUTES: Record<UserRole, string[]> = {
-  Resident: ['/help'],
-  'Business Owner': ['/business'],
+  Resident: ['/help', '/events'],
+  'Business Owner': ['/business', '/events'],
   'Community Organizer': ['/events'],
 };
 

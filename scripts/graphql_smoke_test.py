@@ -5,7 +5,7 @@ from typing import Any
 
 import requests
 
-ENDPOINT = 'http://127.0.0.1:4000/graphql'
+ENDPOINT = 'http://localhost:4000/graphql'
 
 
 def gql(query: str, variables: dict[str, Any] | None = None, token: str | None = None) -> dict[str, Any]:

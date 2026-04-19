@@ -58,7 +58,7 @@ export default function CommentSection({ comments, currentUserInitial, onSubmit 
                 <div className="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant text-xs font-bold shrink-0">
                   {comment.author.charAt(0)}
                 </div>
-                <div className="flex-grow">
+                <div className="grow">
                   <div className="flex items-baseline gap-2">
                     <span className="text-sm font-bold">{comment.author}</span>
                     <span className="text-[10px] text-on-surface-variant">{comment.time}</span>
@@ -80,12 +80,12 @@ export default function CommentSection({ comments, currentUserInitial, onSubmit 
             <div className="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-primary text-xs font-bold shrink-0">
               {currentUserInitial}
             </div>
-            <div className="flex-grow flex gap-2">
+            <div className="grow flex gap-2">
               <input
                 type="text"
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                className="flex-grow bg-surface-container-highest px-4 py-2 rounded-full text-sm border-none focus:ring-2 focus:ring-primary/40 outline-none"
+                className="grow bg-surface-container-highest px-4 py-2 rounded-full text-sm border-none focus:ring-2 focus:ring-primary/40 outline-none"
                 placeholder="Write a comment..."
               />
               <button

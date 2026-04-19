@@ -1,0 +1,9 @@
+{
+  "name": "the-commons-root",
+  "private": true,
+  "description": "Root orchestrator for The Commons backend services",
+  "scripts": {
+    "start-backend": "npx concurrently -k -n auth,comm,events,ai,gateway -c red,blue,yellow,green,magenta \"npm --prefix services/auth-service start\" \"npm --prefix services/community-service start\" \"npm --prefix services/business-events-service start\" \"npm --prefix services/ai-service start\" \"npm --prefix gateway start\"",
+    "dev-backend": "npx concurrently -k -n auth,comm,events,ai,gateway -c red,blue,yellow,green,magenta \"npm --prefix services/auth-service run dev\" \"npm --prefix services/community-service run dev\" \"npm --prefix services/business-events-service run dev\" \"npm --prefix services/ai-service run dev\" \"npm --prefix gateway run dev\""
+  }
+}

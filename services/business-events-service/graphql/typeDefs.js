@@ -89,6 +89,17 @@ const typeDefs = gql`
       capacity: Int
     ): Event
 
+    editEvent(
+      eventId: ID!
+      title: String!
+      description: String!
+      category: String
+      date: String!
+      time: String
+      location: String
+      capacity: Int
+    ): Event
+
     updateEventSuggestedTime(
       eventId: ID!
       suggestedBestTime: String!

@@ -6,28 +6,13 @@ export default function Help() {
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showAlertModal, setShowAlertModal] = useState(false);
 
-  const [alerts, setAlerts] = useState([
-    {
-      id: 1,
-      type: "Emergency",
-      title: "Missing Golden Retriever",
-      content:
-        'Lost near the central park. Answers to "Buddy". Please contact if seen.',
-      time: "10 mins ago",
-    },
-  ]);
+  const [alerts, setAlerts] = useState<
+    { id: number; type: string; title: string; content: string; time: string }[]
+  >([]);
 
-  const [requests, setRequests] = useState([
-    {
-      id: 1,
-      author: "Emily Chen",
-      title: "Need a pet sitter for the weekend",
-      content:
-        "Looking for someone to watch my cat from Friday to Sunday. Will compensate!",
-      matchedVolunteers: ["Marcus T.", "Sophie L."],
-      time: "1 day ago",
-    },
-  ]);
+  const [requests, setRequests] = useState<
+    { id: number; author: string; title: string; content: string; matchedVolunteers: string[]; time: string }[]
+  >([]);
 
   const handleNewRequest = (req: {
     title: string;
@@ -101,7 +86,14 @@ export default function Help() {
           <h3 className="font-headline text-2xl font-bold mb-4">
             Help Requests
           </h3>
-          {requests.map((req) => (
+          {requests.length === 0 ? (
+            <div className="text-center py-16 text-on-surface-variant">
+              <span className="material-symbols-outlined text-5xl mb-3 block opacity-40">handshake</span>
+              <p className="font-bold text-lg">No help requests yet.</p>
+              <p className="text-sm mt-1">Click "Request Help" to ask your neighbors for support.</p>
+            </div>
+          ) : (
+          requests.map((req) => (
             <div
               key={req.id}
               className="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-on-surface/5"
@@ -116,7 +108,7 @@ export default function Help() {
                     <p className="text-xs text-on-surface-variant">
                       {req.time}
                     </p>
-                    bg-on-error
+
                   </div>
                 </div>
               </div>
@@ -152,14 +144,22 @@ export default function Help() {
                 </button>
               </div>
             </div>
-          ))}
+          ))
+          )}
         </div>
 
         <div className="md:col-span-4 space-y-6">
           <h3 className="font-headline text-2xl font-bold mb-4 text-error">
             Active Alerts
           </h3>
-          {alerts.map((alert) => (
+          {alerts.length === 0 ? (
+            <div className="text-center py-8 text-on-surface-variant">
+              <span className="material-symbols-outlined text-4xl mb-2 block opacity-40">verified_user</span>
+              <p className="font-bold">All clear</p>
+              <p className="text-xs mt-1">No active alerts in your area.</p>
+            </div>
+          ) : (
+          alerts.map((alert) => (
             <div
               key={alert.id}
               className="bg-on-error p-6 rounded-xl border border-error/20 relative overflow-hidden"
@@ -179,7 +179,8 @@ export default function Help() {
               </p>
               <p className="text-xs text-error/70 font-bold">{alert.time}</p>
             </div>
-          ))}
+          ))
+          )}
         </div>
       </div>
 

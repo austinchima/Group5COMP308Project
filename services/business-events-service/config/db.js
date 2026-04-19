@@ -1,5 +1,8 @@
-import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import dotenv from "dotenv";
+import mongoose from "mongoose";
+import { MongoMemoryServer } from "mongodb-memory-server";
+
+dotenv.config();
 
 let memoryServer;
 
@@ -10,7 +13,10 @@ async function connectWithFallback(preferredUri, dbName, label) {
       console.log(`${label} DB connected`);
       return;
     } catch (error) {
-      console.warn(`${label} DB unavailable at configured URI, switching to in-memory MongoDB:`, error.message);
+      console.warn(
+        `${label} DB unavailable at configured URI, switching to in-memory MongoDB:`,
+        error.message,
+      );
     }
   }
 
@@ -25,14 +31,18 @@ async function connectWithFallback(preferredUri, dbName, label) {
 
 const connectDB = async () => {
   try {
-    await connectWithFallback(process.env.MONGO_URI, 'the-commons-business-events', 'Business Events');
+    await connectWithFallback(
+      process.env.MONGO_URI,
+      "the-commons-business-events",
+      "Business Events",
+    );
   } catch (error) {
-    console.error('Business Events DB connection error:', error.message);
+    console.error("Business Events DB connection error:", error.message);
     process.exit(1);
   }
 };
 
-process.on('SIGINT', async () => {
+process.on("SIGINT", async () => {
   if (memoryServer) {
     await memoryServer.stop();
   }

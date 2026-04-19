@@ -1,26 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { EventFormData } from './CreateEventModal';
 
-export interface EventFormData {
+export interface EventItem {
+  id: string;
+  organizerId: string;
   title: string;
   description: string;
+  category?: string | null;
   date: string;
-  time: string;
-  location: string;
-  capacity: string;
-  category: string;
+  time?: string | null;
+  location?: string | null;
+  capacity?: number | null;
+  suggestedBestTime?: string | null;
 }
 
-interface CreateEventModalProps {
+interface EditEventModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (event: EventFormData) => Promise<void> | void;
+  event: EventItem | null;
+  onSubmit: (eventId: string, data: EventFormData) => Promise<void> | void;
 }
 
-export default function CreateEventModal({
+export default function EditEventModal({
   isOpen,
   onClose,
+  event,
   onSubmit,
-}: CreateEventModalProps) {
+}: EditEventModalProps) {
   const [form, setForm] = useState<EventFormData>({
     title: '',
     description: '',
@@ -32,31 +38,33 @@ export default function CreateEventModal({
   });
 
   const [loading, setLoading] = useState(false);
-  const [showAiTip, setShowAiTip] = useState(false);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (event) {
+      setForm({
+        title: event.title,
+        description: event.description,
+        date: event.date,
+        time: event.time || '',
+        location: event.location || '',
+        capacity: event.capacity ? String(event.capacity) : '',
+        category: event.category || 'Workshop',
+      });
+    }
+  }, [event]);
+
+  if (!isOpen || !event) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
       setLoading(true);
-      await onSubmit(form);
-
-      setForm({
-        title: '',
-        description: '',
-        date: '',
-        time: '',
-        location: '',
-        capacity: '',
-        category: 'Workshop',
-      });
-
+      await onSubmit(event.id, form);
       onClose();
     } catch (error) {
-      console.error('Failed to create event:', error);
-      alert('Failed to create event. Check backend and GraphQL mutation.');
+      console.error('Failed to edit event:', error);
+      alert('Failed to edit event.');
     } finally {
       setLoading(false);
     }
@@ -72,7 +80,7 @@ export default function CreateEventModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-6">
-          <h2 className="font-headline text-2xl font-bold">Create Event</h2>
+          <h2 className="font-headline text-2xl font-bold">Edit Event</h2>
           <button
             onClick={onClose}
             className="p-2 rounded-full hover:bg-surface-container transition-colors"
@@ -89,7 +97,6 @@ export default function CreateEventModal({
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
               className="w-full bg-surface-container-highest px-4 py-2 rounded-sm border-none focus:ring-2 focus:ring-primary/40 outline-none"
-              placeholder="e.g., Community Garden Planting Day"
               required
             />
           </div>
@@ -102,12 +109,11 @@ export default function CreateEventModal({
               className="w-full bg-surface-container-highest px-4 py-2 rounded-sm border-none focus:ring-2 focus:ring-primary/40 outline-none"
             >
               <option value="Workshop">Workshop</option>
-              <option value="Meetup">Meetup</option>
-              <option value="Clean-up Drive">Clean-up Drive</option>
-              <option value="Festival">Festival</option>
+              <option value="Social">Social</option>
+              <option value="Town Hall">Town Hall</option>
+              <option value="Clean Up">Clean Up</option>
               <option value="Fundraiser">Fundraiser</option>
-              <option value="Sports">Sports</option>
-              <option value="Community">Community</option>
+              <option value="Other">Other</option>
             </select>
           </div>
 
@@ -122,7 +128,6 @@ export default function CreateEventModal({
                 required
               />
             </div>
-
             <div>
               <label className="block text-sm font-bold mb-1">Time</label>
               <input
@@ -130,6 +135,7 @@ export default function CreateEventModal({
                 value={form.time}
                 onChange={(e) => setForm({ ...form, time: e.target.value })}
                 className="w-full bg-surface-container-highest px-4 py-2 rounded-sm border-none focus:ring-2 focus:ring-primary/40 outline-none"
+                required
               />
             </div>
           </div>
@@ -141,19 +147,19 @@ export default function CreateEventModal({
               value={form.location}
               onChange={(e) => setForm({ ...form, location: e.target.value })}
               className="w-full bg-surface-container-highest px-4 py-2 rounded-sm border-none focus:ring-2 focus:ring-primary/40 outline-none"
-              placeholder="Community hall, park, etc."
+              placeholder="e.g., Central Park"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-bold mb-1">Max Capacity</label>
+            <label className="block text-sm font-bold mb-1">Capacity</label>
             <input
               type="number"
+              min="1"
               value={form.capacity}
               onChange={(e) => setForm({ ...form, capacity: e.target.value })}
               className="w-full bg-surface-container-highest px-4 py-2 rounded-sm border-none focus:ring-2 focus:ring-primary/40 outline-none"
-              placeholder="50"
-              min="1"
+              placeholder="Leave blank for unlimited"
             />
           </div>
 
@@ -162,51 +168,28 @@ export default function CreateEventModal({
             <textarea
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
-              className="w-full bg-surface-container-highest px-4 py-2 rounded-sm border-none focus:ring-2 focus:ring-primary/40 outline-none min-h-[80px] resize-y"
-              placeholder="What will attendees experience?"
+              className="w-full bg-surface-container-highest px-4 py-2 rounded-sm border-none focus:ring-2 focus:ring-primary/40 outline-none resize-none min-h-[100px]"
               required
-            />
+            ></textarea>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setShowAiTip(!showAiTip)}
-            className="w-full bg-surface-container-high p-4 rounded-lg flex items-center gap-3 hover:bg-surface-container transition-colors text-left"
-          >
-            <span className="w-2 h-2 bg-tertiary rounded-full animate-pulse"></span>
-            <span className="text-sm font-bold text-tertiary">Suggested Timing</span>
-            <span className="material-symbols-outlined text-sm text-on-surface-variant ml-auto">
-              {showAiTip ? 'expand_less' : 'expand_more'}
-            </span>
-          </button>
-
-          {showAiTip && (
-            <div className="bg-surface-container-low p-4 rounded-lg border border-tertiary/20">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="material-symbols-outlined text-tertiary text-sm">
-                  auto_awesome
-                </span>
-                <p className="text-xs font-bold text-tertiary uppercase">
-                  Timing Hint
-                </p>
-              </div>
-              <p className="text-sm text-on-surface-variant">
-                After the event is created, you can store a suggested best time from the backend using
-                the event timing mutation.
-              </p>
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-linear-to-r from-primary to-primary-dim text-on-primary py-3 rounded-full font-bold shadow-lg shadow-primary/20 active:scale-95 duration-200 mt-4 disabled:opacity-60 flex items-center justify-center gap-2"
-          >
-            {loading && (
-              <div className="w-4 h-4 border-2 border-on-primary/30 border-t-on-primary rounded-full animate-spin"></div>
-            )}
-            Create Event
-          </button>
+          <div className="pt-4 flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="px-6 py-2 text-on-surface font-bold hover:bg-surface-container rounded-full"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading || !form.title || !form.description || !form.date}
+              className="bg-primary text-on-primary px-8 py-2 rounded-full font-bold shadow-md hover:brightness-110 active:scale-95 duration-200 flex items-center gap-2"
+            >
+              {loading ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
         </form>
       </div>
     </div>

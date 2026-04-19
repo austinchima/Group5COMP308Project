@@ -25,6 +25,18 @@ const resolvers = {
       });
     },
 
+    editPost: async (_, { postId, title, content }, { user }) => {
+      requireAuth(user);
+      const post = await Post.findById(postId);
+      if (!post) throw new Error("Post not found");
+      if (post.authorId !== user.id) throw new Error("Not authorized to edit this post");
+      
+      post.title = title;
+      post.content = content;
+      await post.save();
+      return post;
+    },
+
     updatePostSummary: async (_, { postId, summary }, { user }) => {
       requireAuth(user);
       const post = await Post.findById(postId);

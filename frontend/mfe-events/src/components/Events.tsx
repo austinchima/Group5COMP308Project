@@ -1,9 +1,8 @@
-import React, { useMemo, useState } from 'react';
-import { useMutation, useQuery } from '@apollo/client';
+import React, { useMemo, useState, useEffect } from 'react';
 import CreateEventModal, { EventFormData } from './CreateEventModal';
+import EditEventModal from './EditEventModal';
 import VolunteerMatching from './VolunteerMatching';
 import SmartTimingPanel from './SmartTimingPanel';
-import { CREATE_EVENT, GET_EVENTS } from '../graphql/events';
 
 interface Volunteer {
   userId: string;
@@ -26,21 +25,174 @@ interface EventItem {
   createdAt?: string | null;
 }
 
-export default function Events() {
-  const [showCreateEvent, setShowCreateEvent] = useState(false);
+const API_URL = 'http://localhost:4000/graphql';
 
-  const { data, loading, error } = useQuery(GET_EVENTS);
+const GET_EVENTS_STR = `
+  query GetEvents {
+    events {
+      id
+      organizerId
+      organizerName
+      title
+      description
+      category
+      date
+      time
+      location
+      capacity
+      volunteers {
+        userId
+        userName
+      }
+      suggestedBestTime
+      createdAt
+    }
+  }
+`;
 
-  const [createEvent] = useMutation(CREATE_EVENT, {
-    refetchQueries: [{ query: GET_EVENTS }],
+const CREATE_EVENT_STR = `
+  mutation CreateEvent(
+    $title: String!
+    $description: String!
+    $category: String
+    $date: String!
+    $time: String
+    $location: String
+    $capacity: Int
+  ) {
+    createEvent(
+      title: $title
+      description: $description
+      category: $category
+      date: $date
+      time: $time
+      location: $location
+      capacity: $capacity
+    ) {
+      id
+      organizerId
+      organizerName
+      title
+      description
+      category
+      date
+      time
+      location
+      capacity
+      volunteers {
+        userId
+        userName
+      }
+      suggestedBestTime
+      createdAt
+    }
+  }
+`;
+
+const EDIT_EVENT_STR = `
+  mutation EditEvent(
+    $eventId: ID!
+    $title: String!
+    $description: String!
+    $category: String
+    $date: String!
+    $time: String
+    $location: String
+    $capacity: Int
+  ) {
+    editEvent(
+      eventId: $eventId
+      title: $title
+      description: $description
+      category: $category
+      date: $date
+      time: $time
+      location: $location
+      capacity: $capacity
+    ) {
+      id
+      title
+      description
+      category
+      date
+      time
+      location
+      capacity
+    }
+  }
+`;
+
+const ASSIGN_VOLUNTEER_STR = `
+  mutation AssignVolunteer($eventId: ID!, $userId: String!, $userName: String!) {
+    assignVolunteer(eventId: $eventId, userId: $userId, userName: $userName) {
+      id
+      volunteers {
+        userId
+        userName
+      }
+    }
+  }
+`;
+
+async function graphqlRequest<T>(
+  query: string,
+  variables: Record<string, unknown> = {},
+  requiresAuth = false,
+) {
+  const token = localStorage.getItem("token");
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  if (requiresAuth && token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(API_URL, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ query, variables }),
   });
 
-  const events: EventItem[] = useMemo(() => data?.events ?? [], [data]);
+  if (!response.ok) {
+    throw new Error(`Request failed with status ${response.status}`);
+  }
+
+  const payload = await response.json();
+  if (payload.errors?.length) {
+    throw new Error(payload.errors[0].message || "GraphQL request failed.");
+  }
+
+  return payload.data as T;
+}
+
+export default function Events() {
+  const [showCreateEvent, setShowCreateEvent] = useState(false);
+  const [events, setEvents] = useState<EventItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  const fetchEvents = async () => {
+    try {
+      setLoading(true);
+      const data = await graphqlRequest<{ events: EventItem[] }>(GET_EVENTS_STR);
+      setEvents(data.events || []);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to fetch events'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
   const selectedEvent = events[0] ?? null;
 
   const handleNewEvent = async (evt: EventFormData) => {
-    await createEvent({
-      variables: {
+    try {
+      await graphqlRequest(CREATE_EVENT_STR, {
         title: evt.title,
         description: evt.description,
         category: evt.category || null,
@@ -48,8 +200,64 @@ export default function Events() {
         time: evt.time || null,
         location: evt.location || null,
         capacity: evt.capacity ? Number(evt.capacity) : null,
-      },
-    });
+      }, true);
+      await fetchEvents();
+    } catch (e) {
+      console.error("Created failed:", e);
+      alert("Failed to create event. Make sure you are logged in as a Community Organizer.");
+    }
+  };
+
+  const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
+
+  const currentUser = useMemo(() => {
+    try {
+      const raw = localStorage.getItem("user");
+      if (!raw) return null;
+      return JSON.parse(raw) as { id: string; name: string; role: string };
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const isOrganizer = currentUser?.role === "COMMUNITY_ORGANIZER";
+
+  const handleEditEvent = async (id: string, data: EventFormData) => {
+    try {
+      await graphqlRequest(EDIT_EVENT_STR, {
+        eventId: id,
+        title: data.title,
+        description: data.description,
+        category: data.category || null,
+        date: data.date,
+        time: data.time || null,
+        location: data.location || null,
+        capacity: data.capacity ? Number(data.capacity) : null,
+      }, true);
+      await fetchEvents();
+    } catch (e) {
+      console.error("Edit failed:", e);
+      alert("Failed to edit event.");
+    }
+  };
+
+  const handleAssignVolunteer = async (eventId: string) => {
+    if (!currentUser) {
+      alert("You must be logged in to volunteer for events.");
+      return;
+    }
+    
+    try {
+      await graphqlRequest(ASSIGN_VOLUNTEER_STR, {
+        eventId,
+        userId: currentUser.id,
+        userName: currentUser.name,
+      }, true);
+      await fetchEvents();
+    } catch (e) {
+      console.error("Volunteer failed:", e);
+      alert("Failed to volunteer for event. You might need deeper access.");
+    }
   };
 
   return (
@@ -58,21 +266,25 @@ export default function Events() {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
             <h1 className="font-headline font-extrabold text-5xl tracking-tight text-on-surface mb-2">
-              Organizer Hub
+              {isOrganizer ? "Organizer Hub" : "Community Events Hub"}
             </h1>
             <p className="text-on-surface-variant max-w-xl text-lg">
-              Curate meaningful moments. Manage your events, volunteers, and scheduling details.
+              {isOrganizer
+                ? "Curate meaningful moments. Manage your events, volunteers, and scheduling details."
+                : "Discover and participate in events around your neighborhood."}
             </p>
           </div>
 
-          <div className="flex gap-4">
-            <button
-              onClick={() => setShowCreateEvent(true)}
-              className="bg-linear-to-r from-primary to-primary-dim text-on-primary px-8 py-3 rounded-full font-extrabold shadow-lg shadow-primary/20 active:scale-95 duration-200"
-            >
-              Create Event
-            </button>
-          </div>
+          {isOrganizer && (
+            <div className="flex gap-4">
+              <button
+                onClick={() => setShowCreateEvent(true)}
+                className="bg-linear-to-r from-primary to-primary-dim text-on-primary px-8 py-3 rounded-full font-extrabold shadow-lg shadow-primary/20 active:scale-95 duration-200"
+              >
+                Create Event
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
@@ -81,75 +293,120 @@ export default function Events() {
 
         <div className="md:col-span-8 bg-surface-container-lowest p-8 rounded-xl shadow-sm border border-on-surface/5">
           <div className="flex items-center justify-between mb-8">
-            <h3 className="font-headline text-2xl font-bold">Manage Active Events</h3>
+            <h3 className="font-headline text-2xl font-bold">
+              {isOrganizer ? "Manage Active Events" : "Upcoming Events"}
+            </h3>
           </div>
 
           {loading && <p>Loading events...</p>}
-          {error && <p className="text-red-500">Failed to load events.</p>}
+          {error && <p className="text-red-500">Failed to load events. {error.message}</p>}
 
           {!loading && !error && (
             <div className="space-y-6">
               {events.length === 0 ? (
                 <p className="text-on-surface-variant">No events found.</p>
               ) : (
-                events.map((evt) => (
-                  <div
-                    key={evt.id}
-                    className="group flex flex-col lg:flex-row lg:items-start gap-6 p-4 -mx-4 rounded-xl hover:bg-surface-container-low/50 transition-colors"
-                  >
-                    <div className="grow">
-                      <div className="flex flex-wrap items-center gap-3 mb-2">
-                        <h4 className="font-bold text-xl">{evt.title}</h4>
-                        {evt.category && (
-                          <span className="px-3 py-1 bg-surface-container text-xs font-bold rounded-full">
-                            {evt.category}
-                          </span>
-                        )}
-                      </div>
+                events.map((evt) => {
+                  const isOwner = currentUser?.id === evt.organizerId;
+                  const hasRSVPd = evt.volunteers?.some((v) => v.userId === currentUser?.id) || false;
 
-                      <p className="text-sm text-on-surface-variant">
-                        {evt.date}
-                        {evt.time ? ` at ${evt.time}` : ''}
-                      </p>
+                  return (
+                    <div
+                      key={evt.id}
+                      className="group flex flex-col lg:flex-row lg:items-start gap-6 p-4 -mx-4 rounded-xl hover:bg-surface-container-low/50 transition-colors"
+                    >
+                      <div className="grow">
+                        <div className="flex flex-wrap items-center gap-3 mb-2">
+                          <h4 className="font-bold text-xl">{evt.title}</h4>
+                          {evt.category && (
+                            <span className="px-3 py-1 bg-surface-container text-xs font-bold rounded-full">
+                              {evt.category}
+                            </span>
+                          )}
+                        </div>
 
-                      <p className="text-sm text-on-surface-variant mt-1">
-                        {evt.location || 'No location provided'}
-                      </p>
-
-                      <p className="text-sm text-on-surface-variant mt-1">
-                        Organizer: {evt.organizerName || 'Unknown'}
-                      </p>
-
-                      <p className="text-sm text-on-surface-variant mt-1">
-                        Capacity: {evt.capacity ?? 'Not set'}
-                      </p>
-
-                      <p className="text-sm text-on-surface-variant mt-1">
-                        Volunteers: {evt.volunteers?.length || 0}
-                      </p>
-
-                      {evt.suggestedBestTime && (
-                        <p className="text-sm text-primary font-semibold mt-2">
-                          Suggested time: {evt.suggestedBestTime}
+                        <p className="text-sm text-on-surface-variant">
+                          {evt.date}
+                          {evt.time ? ` at ${evt.time}` : ''}
                         </p>
-                      )}
 
-                      <p className="text-sm mt-3">{evt.description}</p>
+                        <p className="text-sm text-on-surface-variant mt-1">
+                          {evt.location || 'No location provided'}
+                        </p>
+
+                        <p className="text-sm text-on-surface-variant mt-1">
+                          Organizer: {evt.organizerName || 'Unknown'}
+                        </p>
+
+                        <div className="flex gap-4 mt-1 items-center">
+                          <p className="text-sm text-on-surface-variant">
+                            Capacity: {evt.capacity ?? 'Unlimited'}
+                          </p>
+                          <p className="text-sm text-on-surface-variant">
+                            Volunteers: {evt.volunteers?.length || 0}
+                          </p>
+                        </div>
+
+                        {evt.suggestedBestTime && (
+                          <p className="text-sm text-primary font-semibold mt-2">
+                            Suggested time: {evt.suggestedBestTime}
+                          </p>
+                        )}
+
+                        <p className="text-sm mt-3">{evt.description}</p>
+
+                        <div className="mt-4 flex gap-3">
+                          {!isOrganizer && (
+                            <button
+                              disabled={hasRSVPd}
+                              onClick={() => handleAssignVolunteer(evt.id)}
+                              className={`px-4 py-2 text-sm font-bold rounded-full transition-colors flex items-center gap-1
+                                ${hasRSVPd 
+                                  ? 'bg-surface-container-highest text-on-surface-variant cursor-not-allowed' 
+                                  : 'bg-primary/10 text-primary hover:bg-primary/20'}`}
+                            >
+                              <span className="material-symbols-outlined text-[18px]">
+                                {hasRSVPd ? 'check_circle' : 'person_add'}
+                              </span>
+                              {hasRSVPd ? "Already Volunteered" : "Volunteer"}
+                            </button>
+                          )}
+
+                          {isOwner && (
+                            <button
+                              onClick={() => setEditingEvent(evt)}
+                              className="px-4 py-2 text-sm font-bold bg-secondary/10 text-secondary hover:bg-secondary/20 rounded-full transition-colors flex items-center gap-1"
+                            >
+                              <span className="material-symbols-outlined text-[18px]">
+                                edit
+                              </span>
+                              Edit
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           )}
         </div>
 
-        {selectedEvent && <VolunteerMatching event={selectedEvent} />}
+        {events.length > 0 && <VolunteerMatching events={events} />}
       </div>
 
       <CreateEventModal
         isOpen={showCreateEvent}
         onClose={() => setShowCreateEvent(false)}
         onSubmit={handleNewEvent}
+      />
+
+      <EditEventModal
+        isOpen={!!editingEvent}
+        onClose={() => setEditingEvent(null)}
+        event={editingEvent}
+        onSubmit={handleEditEvent}
       />
     </>
   );

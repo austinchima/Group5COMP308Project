@@ -54,7 +54,7 @@ function ServerError({ error, onRetry }: { error: Error | null; onRetry: () => v
             <summary className="text-sm font-bold text-on-surface-variant cursor-pointer">
               Technical Details
             </summary>
-            <pre className="mt-2 text-xs text-error whitespace-pre-wrap break-words font-mono">
+            <pre className="mt-2 text-xs text-error whitespace-pre-wrap wrap-break-word font-mono">
               {error.message}
             </pre>
           </details>

@@ -1,6 +1,7 @@
 export type UserRole = 'Resident' | 'Business Owner' | 'Community Organizer';
 
 export interface AuthUser {
+  id?: string;
   name: string;
   email: string;
   role: UserRole;
@@ -54,12 +55,13 @@ export interface NavItem {
 
 const SHARED_NAV: NavItem[] = [
   { to: '/feed', label: 'Feed', icon: 'dynamic_feed' },
+  { to: '/events', label: 'Events', icon: 'event' },
 ];
 
 const ROLE_NAV: Record<UserRole, NavItem[]> = {
   Resident: [{ to: '/help', label: 'Help', icon: 'handshake' }],
   'Business Owner': [{ to: '/business', label: 'Business', icon: 'storefront' }],
-  'Community Organizer': [{ to: '/events', label: 'Events', icon: 'event' }],
+  'Community Organizer': [],
 };
 
 const PROFILE_NAV: NavItem = { to: '/profile', label: 'Profile', icon: 'person' };

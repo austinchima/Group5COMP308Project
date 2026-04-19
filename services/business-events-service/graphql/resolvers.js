@@ -98,6 +98,32 @@ const resolvers = {
       });
     },
 
+    editEvent: async (
+      _,
+      { eventId, title, description, category, date, time, location, capacity },
+      { user }
+    ) => {
+      requireAuth(user);
+
+      const event = await Event.findById(eventId);
+      if (!event) throw new Error('Event not found');
+
+      if (event.organizerId !== user.id) {
+        throw new Error('You are not authorized to edit this event');
+      }
+
+      event.title = title;
+      event.description = description;
+      if (category !== undefined) event.category = category;
+      event.date = date;
+      if (time !== undefined) event.time = time;
+      if (location !== undefined) event.location = location;
+      if (capacity !== undefined) event.capacity = capacity;
+
+      await event.save();
+      return event;
+    },
+
     updateEventSuggestedTime: async (
       _,
       { eventId, suggestedBestTime },

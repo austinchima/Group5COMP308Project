@@ -60,6 +60,7 @@ export default function CreatePostModal({ isOpen, onClose, onSubmit }: CreatePos
             >
               <option value="News">News</option>
               <option value="Discussion">Discussion</option>
+              <option value="Emergency">Emergency</option>
             </select>
           </div>
           <div>
@@ -92,7 +93,7 @@ export default function CreatePostModal({ isOpen, onClose, onSubmit }: CreatePos
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-primary to-primary-dim text-on-primary py-3 rounded-full font-bold shadow-lg shadow-primary/20 active:scale-95 duration-200 mt-4 disabled:opacity-60 flex items-center justify-center gap-2"
+            className="w-full bg-linear-to-r from-primary to-primary-dim text-on-primary py-3 rounded-full font-bold shadow-lg shadow-primary/20 active:scale-95 duration-200 mt-4 disabled:opacity-60 flex items-center justify-center gap-2"
           >
             {loading && <div className="w-4 h-4 border-2 border-on-primary/30 border-t-on-primary rounded-full animate-spin"></div>}
             Publish Post

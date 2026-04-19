@@ -7,35 +7,16 @@ export default function Business() {
   const [showBusinessModal, setShowBusinessModal] = useState(false);
   const [showDealModal, setShowDealModal] = useState(false);
 
-  const [businesses, setBusinesses] = useState([
+  const [businesses, setBusinesses] = useState<
     {
-      id: 1,
-      name: "Green Thumb Nursery",
-      category: "Retail",
-      description:
-        "Your local source for native plants and gardening supplies.",
-      deals: [
-        {
-          title: "Spring Sale",
-          description: "20% off all indoor plants this weekend.",
-        },
-      ],
-      reviews: [
-        {
-          author: "Jane D.",
-          rating: 5,
-          content: "Amazing selection and very helpful staff!",
-          sentiment: "POSITIVE",
-        },
-        {
-          author: "Mark S.",
-          rating: 3,
-          content: "Good plants but a bit pricey.",
-          sentiment: "NEUTRAL",
-        },
-      ],
-    },
-  ]);
+      id: number;
+      name: string;
+      category: string;
+      description: string;
+      deals: { title: string; description: string }[];
+      reviews: { author: string; rating: number; content: string; sentiment: string }[];
+    }[]
+  >([]);
 
   const handleNewBusiness = (biz: {
     name: string;
@@ -104,7 +85,14 @@ export default function Business() {
       </header>
 
       <div className="space-y-8">
-        {businesses.map((bus) => (
+        {businesses.length === 0 ? (
+          <div className="text-center py-16 text-on-surface-variant">
+            <span className="material-symbols-outlined text-5xl mb-3 block opacity-40">storefront</span>
+            <p className="font-bold text-lg">No businesses listed yet.</p>
+            <p className="text-sm mt-1">Click "List Business" to add your first local business.</p>
+          </div>
+        ) : (
+        businesses.map((bus) => (
           <div
             key={bus.id}
             className="bg-surface-container-lowest p-8 rounded-xl shadow-sm border border-on-surface/5"
@@ -190,7 +178,8 @@ export default function Business() {
               </div>
             </div>
           </div>
-        ))}
+        ))
+        )}
       </div>
 
       <CreateBusinessModal

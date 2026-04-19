@@ -27,9 +27,24 @@ async function makeSubschema(endpoint) {
   const rawExecutor = buildHTTPExecutor({
     endpoint,
   });
+  let schema;
+  let retries = 15;
+  while (retries > 0) {
+    try {
+      schema = await schemaFromExecutor(rawExecutor);
+      break;
+    } catch (e) {
+      console.log(`Waiting for ${endpoint} to be ready... (${retries} retries left)`);
+      retries -= 1;
+      if (retries === 0) {
+        throw new Error(`Could not obtain schema from ${endpoint} after multiple retries.`);
+      }
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+  }
 
   return {
-    schema: await schemaFromExecutor(rawExecutor),
+    schema,
     executor: (request) =>
       rawExecutor({
         ...request,
