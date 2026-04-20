@@ -28,7 +28,7 @@ async function makeSubschema(endpoint) {
     endpoint,
   });
   let schema;
-  let retries = 15;
+  let retries = 30; // Increased for Cloud Run cold starts
   while (retries > 0) {
     try {
       schema = await schemaFromExecutor(rawExecutor);
@@ -80,8 +80,8 @@ async function startGateway() {
 
     app.get('/', (req, res) => {
       res.json({
-        message: 'Community AI Gateway is running',
-        graphql: `http://localhost:${PORT}/graphql`,
+        message: 'The Commons AI Gateway is running',
+        status: 'online',
         services: serviceUrls,
       });
     });
@@ -95,9 +95,8 @@ async function startGateway() {
       }),
     );
 
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`Gateway running on port ${PORT}`);
-      console.log(`GraphQL ready at http://localhost:${PORT}/graphql`);
     });
   } catch (error) {
     console.error('Gateway error:', error);

@@ -166,7 +166,33 @@ cp services/ai-service/.env.example services/ai-service/.env
 | **Community** | `services/community-.../.env` | `MONGO_URI`, `JWT_SECRET` |
 
 > [!TIP]
-> Make sure to update the `JWT_SECRET` with a secure random string and provide your own `GEMINI_API_KEY` in the AI service.
+> Make sure to update the `JWT_SECRET` with a secure random string and provide your own `GEMINI_API_KEY` in the AI service. **Important: The `JWT_SECRET` must be the exact same string across all services** so they can all verify the same tokens.
+
+---
+
+## Production Setup
+
+### 1. Database (MongoDB Atlas)
+- Create a free cluster on [MongoDB Atlas](https://www.mongodb.com/cloud/atlas).
+- Network Access: Allow `0.0.0.0/0` (or specific IPs of GCP/Vercel).
+- Get your connection string.
+
+### 2. Backend (Google Cloud Run)
+- Create a GCP Project and enable **Cloud Run Admin API** and **Artifact Registry API**.
+- Create a Service Account with **Cloud Run Admin** and **GitHub Actions** roles.
+- Add these secrets to your GitHub repository:
+  - `GCP_PROJECT_ID`: Your GCP project ID.
+  - `GCP_SA_KEY`: The JSON key file for your service account.
+
+The included GitHub Action (`.github/workflows/deploy-backend.yml`) will automatically build and deploy all services on every push to `main`.
+
+### 3. Frontend (Vercel)
+- Import your repository into **Vercel**.
+- Vercel will detect 4 potential projects. Deploy them individually using these settings:
+  - **Framework Preset**: Vite
+  - **Root Directory**: `frontend/shell`, `frontend/mfe-auth`, etc.
+  - **Environment Variables**:
+    - For `shell`: Set `VITE_MFE_AUTH_URL`, `VITE_MFE_COMMUNITY_URL`, and `VITE_MFE_EVENTS_URL` to the production Vercel URLs of your remotes.
 
 ---
 
