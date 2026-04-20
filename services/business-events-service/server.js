@@ -46,6 +46,6 @@ app.get('/', (req, res) => {
 
 const PORT = process.env.PORT || 5003;
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Business Events service running on port ${PORT}`);
 });
