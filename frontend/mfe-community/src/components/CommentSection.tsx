@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { formatRelativeTime } from '../utils/time.ts';
 
 interface Comment {
   id: string;
@@ -61,7 +62,7 @@ export default function CommentSection({ comments, currentUserInitial, onSubmit 
                 <div className="grow">
                   <div className="flex items-baseline gap-2">
                     <span className="text-sm font-bold">{comment.author}</span>
-                    <span className="text-[10px] text-on-surface-variant">{comment.time}</span>
+                    <span className="text-[10px] text-on-surface-variant">{formatRelativeTime(comment.time)}</span>
                   </div>
                   <p className="text-sm text-on-surface-variant mt-1">{comment.content}</p>
                 </div>

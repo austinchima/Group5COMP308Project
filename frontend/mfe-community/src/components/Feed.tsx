@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import CreatePostModal from "./CreatePostModal.tsx";
 import EditPostModal from "./EditPostModal.tsx";
 import CommentSection from "./CommentSection.tsx";
+import { formatRelativeTime } from "../utils/time.ts";
 
 type PostType = "News" | "Discussion" | "Emergency";
 type FilterType = "All" | PostType;
@@ -215,27 +216,6 @@ function getCurrentUserName() {
   }
 }
 
-function formatRelativeTime(dateString?: string) {
-  if (!dateString) return "Just now";
-
-  const created = new Date(dateString).getTime();
-  if (Number.isNaN(created)) return "Just now";
-
-  const diffMs = Date.now() - created;
-  const diffMinutes = Math.max(1, Math.floor(diffMs / 60000));
-
-  if (diffMinutes < 60) {
-    return `${diffMinutes} min ago`;
-  }
-
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) {
-    return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`;
-  }
-
-  const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
-}
 
 function inferType(tags?: string[] | null): PostType {
   const normalized = (tags ?? []).map((tag) => tag.toLowerCase());
@@ -249,7 +229,7 @@ function mapComment(comment: BackendComment, index: number): FeedComment {
     id: comment.id ?? `${comment.userName}-${index}`,
     author: comment.userName,
     content: comment.text,
-    time: formatRelativeTime(comment.createdAt),
+    time: comment.createdAt || new Date().toISOString(),
   };
 }
 
@@ -273,7 +253,7 @@ function mapPost(post: BackendPost): FeedPost {
     title: post.title,
     content: post.content,
     summary: post.summary?.trim() ?? "",
-    time: formatRelativeTime(post.createdAt),
+    time: post.createdAt || new Date().toISOString(),
     comments: (post.comments ?? []).map(mapComment),
   };
 }
@@ -285,6 +265,12 @@ export default function Feed() {
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [, setTick] = useState(0); // Used to force-refresh relative time labels
+
+  useEffect(() => {
+    const timer = setInterval(() => setTick((t) => t + 1), 60000);
+    return () => clearInterval(timer);
+  }, []);
   const currentUserName = useMemo(() => getCurrentUserName(), []);
   const currentUserId = useMemo(() => getCurrentUserId(), []);
   const currentUserInitial = currentUserName.charAt(0).toUpperCase();
@@ -508,7 +494,7 @@ export default function Feed() {
                   <div>
                     <h4 className="font-bold">{post.author}</h4>
                     <p className="text-xs text-on-surface-variant">
-                      {post.time}
+                      {formatRelativeTime(post.time)}
                     </p>
                   </div>
                 </div>
