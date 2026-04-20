@@ -71,13 +71,15 @@ const resolvers = {
       return post;
     },
 
-    createHelpRequest: async (_, { title, description, neededSkills, location }, { user }) => {
+    createHelpRequest: async (_, { title, description, category, urgency, neededSkills, location }, { user }) => {
       requireAuth(user);
       return HelpRequest.create({
         requesterId: user.id,
         requesterName: user.name,
         title,
         description,
+        category: category || 'General',
+        urgency: urgency || 'Normal',
         neededSkills,
         location
       });
@@ -92,14 +94,15 @@ const resolvers = {
       return helpRequest;
     },
 
-    createEmergencyAlert: async (_, { title, description, severity, location }, { user }) => {
+    createEmergencyAlert: async (_, { title, description, type, severity, location }, { user }) => {
       requireAuth(user);
       return EmergencyAlert.create({
         reporterId: user.id,
         reporterName: user.name,
         title,
         description,
-        severity,
+        type: type || 'Safety',
+        severity: severity || 'MEDIUM',
         location
       });
     }

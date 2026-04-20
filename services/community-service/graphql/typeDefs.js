@@ -33,6 +33,8 @@ const typeDefs = gql`
     requesterName: String!
     title: String!
     description: String!
+    category: String
+    urgency: String
     neededSkills: [String]
     location: String
     matchedVolunteers: [MatchedVolunteer]
@@ -46,6 +48,7 @@ const typeDefs = gql`
     reporterName: String!
     title: String!
     description: String!
+    type: String
     severity: String!
     location: String
     isActive: Boolean
@@ -65,10 +68,10 @@ const typeDefs = gql`
     addComment(postId: ID!, text: String!): Post
     toggleLikePost(postId: ID!): Post
 
-    createHelpRequest(title: String!, description: String!, neededSkills: [String], location: String): HelpRequest
+    createHelpRequest(title: String!, description: String!, category: String, urgency: String, neededSkills: [String], location: String): HelpRequest
     updateMatchedVolunteers(helpRequestId: ID!, volunteers: [VolunteerInput!]!): HelpRequest
 
-    createEmergencyAlert(title: String!, description: String!, severity: String!, location: String): EmergencyAlert
+    createEmergencyAlert(title: String!, description: String!, type: String, severity: String, location: String): EmergencyAlert
   }
 
   input VolunteerInput {

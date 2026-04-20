@@ -1,56 +1,137 @@
-import React, { useState } from "react";
 import CreateHelpModal from "./CreateHelpModal.tsx";
 import EmergencyAlertModal from "./EmergencyAlertModal.tsx";
+import { formatRelativeTime } from "../utils/time.ts";
+
+const API_URL = import.meta.env.VITE_GATEWAY_URL || "http://localhost:4000/graphql";
+
+const FETCH_HELP_DATA = `
+  query GetHelpData {
+    helpRequests {
+      id
+      requesterName
+      title
+      description
+      category
+      urgency
+      matchedVolunteers {
+        userName
+      }
+      createdAt
+    }
+    emergencyAlerts {
+      id
+      reporterName
+      title
+      description
+      type
+      severity
+      location
+      createdAt
+    }
+  }
+`;
+
+const CREATE_HELP_REQUEST = `
+  mutation CreateHelp($title: String!, $description: String!, $category: String, $urgency: String) {
+    createHelpRequest(title: $title, description: $description, category: $category, urgency: $urgency) {
+      id
+    }
+  }
+`;
+
+const CREATE_EMERGENCY_ALERT = `
+  mutation CreateAlert($title: String!, $description: String!, $type: String, $location: String) {
+    createEmergencyAlert(title: $title, description: $description, type: $type, location: $location) {
+      id
+    }
+  }
+`;
+
+async function graphqlRequest<T>(
+  query: string,
+  variables: Record<string, unknown> = {},
+  requiresAuth = false,
+) {
+  const token = localStorage.getItem("token");
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (requiresAuth && token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  const response = await fetch(API_URL, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ query, variables }),
+  });
+  const payload = await response.json();
+  if (payload.errors) throw new Error(payload.errors[0].message);
+  return payload.data as T;
+}
 
 export default function Help() {
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showAlertModal, setShowAlertModal] = useState(false);
 
-  const [alerts, setAlerts] = useState<
-    { id: number; type: string; title: string; content: string; time: string }[]
-  >([]);
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const [requests, setRequests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [, setTick] = useState(0);
 
-  const [requests, setRequests] = useState<
-    { id: number; author: string; title: string; content: string; matchedVolunteers: string[]; time: string }[]
-  >([]);
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const data = await graphqlRequest<{ helpRequests: any[]; emergencyAlerts: any[] }>(FETCH_HELP_DATA);
+      setRequests(data.helpRequests || []);
+      setAlerts(data.emergencyAlerts || []);
+    } catch (err) {
+      console.error("Failed to fetch help data:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const handleNewRequest = (req: {
+  const handleNewRequest = async (req: {
     title: string;
     content: string;
     category: string;
     urgency: string;
   }) => {
-    setRequests([
-      {
-        id: Date.now(),
-        author: "You",
+    try {
+      await graphqlRequest(CREATE_HELP_REQUEST, {
         title: req.title,
-        content: req.content,
-        matchedVolunteers: ["AI Matching..."],
-        time: "Just now",
-      },
-      ...requests,
-    ]);
+        description: req.content,
+        category: req.category,
+        urgency: req.urgency
+      }, true);
+      await fetchData();
+    } catch (err) {
+      alert("Failed to post help request");
+    }
   };
 
-  const handleNewAlert = (alert: {
+  const handleNewAlert = async (alert: {
     title: string;
     content: string;
     type: string;
     location: string;
   }) => {
-    setAlerts([
-      {
-        id: Date.now(),
-        type: alert.type,
+    try {
+      await graphqlRequest(CREATE_EMERGENCY_ALERT, {
         title: alert.title,
-        content: `${alert.content} (Location: ${alert.location})`,
-        time: "Just now",
-      },
-      ...alerts,
-    ]);
+        description: alert.content,
+        type: alert.type,
+        location: alert.location
+      }, true);
+      await fetchData();
+    } catch (err) {
+      alert("Failed to broadcast alert");
+    }
   };
+
   React.useEffect(() => {
+    fetchData();
+    const timer = setInterval(() => setTick(t => t + 1), 60000);
     const handleFab = (e: any) => {
       if (e.detail.pathname === "/help") {
         setShowHelpModal(true);
@@ -58,7 +139,10 @@ export default function Help() {
     };
 
     window.addEventListener("commons-fab-click", handleFab);
-    return () => window.removeEventListener("commons-fab-click", handleFab);
+    return () => {
+      window.removeEventListener("commons-fab-click", handleFab);
+      clearInterval(timer);
+    };
   }, []);
 
   return (
@@ -96,7 +180,11 @@ export default function Help() {
           <h3 className="font-headline text-2xl font-bold mb-4">
             Help Requests
           </h3>
-          {requests.length === 0 ? (
+          {loading ? (
+            <div className="flex justify-center py-20">
+              <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+            </div>
+          ) : requests.length === 0 ? (
             <div className="text-center py-16 text-on-surface-variant">
               <span className="material-symbols-outlined text-5xl mb-3 block opacity-40">handshake</span>
               <p className="font-bold text-lg">No help requests yet.</p>
@@ -111,21 +199,30 @@ export default function Help() {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center text-secondary font-bold">
-                    {req.author.charAt(0)}
+                    {(req.requesterName || "U").charAt(0)}
                   </div>
                   <div>
-                    <h4 className="font-bold">{req.author}</h4>
+                    <h4 className="font-bold">{req.requesterName || "Anonymous"}</h4>
                     <p className="text-xs text-on-surface-variant">
-                      {req.time}
+                      {formatRelativeTime(req.createdAt)}
                     </p>
-
                   </div>
                 </div>
+                {req.urgency === 'High' && (
+                   <span className="px-3 py-1 bg-error-container text-on-error-container text-[10px] font-black uppercase rounded-full">
+                     High Urgency
+                   </span>
+                )}
               </div>
-              <h3 className="font-headline text-xl font-bold mb-2">
+              <h3 className="font-headline text-xl font-bold mb-1">
                 {req.title}
               </h3>
-              <p className="text-on-surface-variant mb-4">{req.content}</p>
+              <div className="flex gap-2 mb-3">
+                <span className="text-[10px] font-bold px-2 py-0.5 bg-surface-container-high rounded-sm text-on-surface-variant uppercase">
+                  {req.category || 'General'}
+                </span>
+              </div>
+              <p className="text-on-surface-variant mb-4">{req.description}</p>
 
               <div className="bg-surface-container-low p-4 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
@@ -136,15 +233,19 @@ export default function Help() {
                     AI Matched Volunteers
                   </p>
                 </div>
-                <div className="flex gap-2">
-                  {req.matchedVolunteers.map((vol, idx) => (
-                    <span
-                      key={idx}
-                      className="px-3 py-1 bg-white text-on-surface text-xs font-bold rounded-full border border-on-surface/10"
-                    >
-                      {vol}
-                    </span>
-                  ))}
+                <div className="flex gap-2 flex-wrap">
+                  {(req.matchedVolunteers?.length > 0) ? (
+                    req.matchedVolunteers.map((vol: any, idx: number) => (
+                      <span
+                        key={idx}
+                        className="px-3 py-1 bg-white text-on-surface text-xs font-bold rounded-full border border-on-surface/10"
+                      >
+                        {vol.userName}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-[10px] text-on-surface-variant italic">AI is analyzing volunteers...</span>
+                  )}
                 </div>
               </div>
 
@@ -162,7 +263,7 @@ export default function Help() {
           <h3 className="font-headline text-2xl font-bold mb-4 text-error">
             Active Alerts
           </h3>
-          {alerts.length === 0 ? (
+          {loading ? null : alerts.length === 0 ? (
             <div className="text-center py-8 text-on-surface-variant">
               <span className="material-symbols-outlined text-4xl mb-2 block opacity-40">verified_user</span>
               <p className="font-bold">All clear</p>
@@ -172,7 +273,7 @@ export default function Help() {
           alerts.map((alert) => (
             <div
               key={alert.id}
-              className="bg-on-error p-6 rounded-xl border border-error/20 relative overflow-hidden"
+              className="bg-on-error p-6 rounded-xl border border-error/20 relative overflow-hidden mb-6"
             >
               <div className="absolute top-0 left-0 w-1 h-full bg-error"></div>
               <div className="flex items-center gap-2 mb-2 text-error">
@@ -180,14 +281,20 @@ export default function Help() {
                   campaign
                 </span>
                 <span className="font-bold text-sm uppercase tracking-wider">
-                  {alert.type}
+                  {alert.type || 'Emergency'}
                 </span>
               </div>
               <h4 className="font-bold text-lg mb-1">{alert.title}</h4>
               <p className="text-sm text-on-surface-variant mb-2">
-                {alert.content}
+                {alert.description}
               </p>
-              <p className="text-xs text-error/70 font-bold">{alert.time}</p>
+              {alert.location && (
+                <p className="text-[10px] text-on-surface-variant/60 mb-2 italic flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[12px]">location_on</span>
+                  {alert.location}
+                </p>
+              )}
+              <p className="text-xs text-error/70 font-bold">{formatRelativeTime(alert.createdAt)}</p>
             </div>
           ))
           )}

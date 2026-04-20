@@ -6,6 +6,8 @@ const helpRequestSchema = new mongoose.Schema(
     requesterName: { type: String, required: true },
     title: { type: String, required: true },
     description: { type: String, required: true },
+    category: { type: String, default: 'General' },
+    urgency: { type: String, default: 'Normal' },
     neededSkills: [{ type: String }],
     location: { type: String, default: '' },
     matchedVolunteers: [
