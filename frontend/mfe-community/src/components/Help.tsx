@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from "react";
 import CreateHelpModal from "./CreateHelpModal.tsx";
 import EmergencyAlertModal from "./EmergencyAlertModal.tsx";
 import { formatRelativeTime } from "../utils/time.ts";
@@ -106,11 +107,11 @@ export default function Help() {
       }, true);
       await fetchData();
     } catch (err) {
-      alert("Failed to post help request");
+      window.alert("Failed to post help request");
     }
   };
 
-  const handleNewAlert = async (alert: {
+  const handleNewAlert = async (alertData: {
     title: string;
     content: string;
     type: string;
@@ -118,14 +119,14 @@ export default function Help() {
   }) => {
     try {
       await graphqlRequest(CREATE_EMERGENCY_ALERT, {
-        title: alert.title,
-        description: alert.content,
-        type: alert.type,
-        location: alert.location
+        title: alertData.title,
+        description: alertData.content,
+        type: alertData.type,
+        location: alertData.location
       }, true);
       await fetchData();
     } catch (err) {
-      alert("Failed to broadcast alert");
+      window.alert("Failed to broadcast alert");
     }
   };
 
