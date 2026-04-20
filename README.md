@@ -1,4 +1,7 @@
-# Link to Live Website — https://the-commons-shell.vercel.app/
+# Link to Live Website
+```
+https://the-commons-shell.vercel.app/
+```
 
 # The Commons — Community Engagement Platform
 
