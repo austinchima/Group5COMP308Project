@@ -25,7 +25,7 @@ interface EventItem {
   createdAt?: string | null;
 }
 
-const API_URL = 'http://localhost:4000/graphql';
+const API_URL = import.meta.env.VITE_GATEWAY_URL || 'http://localhost:4000/graphql';
 
 const GET_EVENTS_STR = `
   query GetEvents {

@@ -44,7 +44,7 @@ interface FeedPost {
   comments: FeedComment[];
 }
 
-const API_URL = "http://localhost:4000/graphql";
+const API_URL = import.meta.env.VITE_GATEWAY_URL || "http://localhost:4000/graphql";
 const FILTERS: FilterType[] = ["All", "News", "Discussion", "Emergency"];
 
 const POSTS_QUERY = `
