@@ -35,13 +35,17 @@ jobs:
       - name: Push AI Service
         run: docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${GAR_NAME}/ai-service:latest
       - name: Deploy AI Service
+        id: deploy_ai
         run: |
-          gcloud run deploy ai-service \
+          URL=$(gcloud run deploy ai-service \
             --image ${REGION}-docker.pkg.dev/${PROJECT_ID}/${GAR_NAME}/ai-service:latest \
             --region ${REGION} \
             --platform managed \
             --allow-unauthenticated \
-            --port 8080
+            --set-env-vars "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" \
+            --port 8080 \
+            --format='value(status.url)')
+          echo "URL=$URL" >> $GITHUB_OUTPUT
 
       # Auth Service
       - name: Build Auth Service
@@ -49,13 +53,17 @@ jobs:
       - name: Push Auth Service
         run: docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${GAR_NAME}/auth-service:latest
       - name: Deploy Auth Service
+        id: deploy_auth
         run: |
-          gcloud run deploy auth-service \
+          URL=$(gcloud run deploy auth-service \
             --image ${REGION}-docker.pkg.dev/${PROJECT_ID}/${GAR_NAME}/auth-service:latest \
             --region ${REGION} \
             --platform managed \
             --allow-unauthenticated \
-            --port 8080
+            --set-env-vars "MONGO_URI=${{ secrets.MONGO_URI }},JWT_SECRET=${{ secrets.JWT_SECRET }}" \
+            --port 8080 \
+            --format='value(status.url)')
+          echo "URL=$URL" >> $GITHUB_OUTPUT
 
       # Business Events Service
       - name: Build Business Service
@@ -63,13 +71,17 @@ jobs:
       - name: Push Business Service
         run: docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${GAR_NAME}/business-service:latest
       - name: Deploy Business Service
+        id: deploy_business
         run: |
-          gcloud run deploy business-service \
+          URL=$(gcloud run deploy business-service \
             --image ${REGION}-docker.pkg.dev/${PROJECT_ID}/${GAR_NAME}/business-service:latest \
             --region ${REGION} \
             --platform managed \
             --allow-unauthenticated \
-            --port 8080
+            --set-env-vars "MONGO_URI=${{ secrets.MONGO_URI }},JWT_SECRET=${{ secrets.JWT_SECRET }}" \
+            --port 8080 \
+            --format='value(status.url)')
+          echo "URL=$URL" >> $GITHUB_OUTPUT
 
       # Community Service
       - name: Build Community Service
@@ -77,13 +89,17 @@ jobs:
       - name: Push Community Service
         run: docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${GAR_NAME}/community-service:latest
       - name: Deploy Community Service
+        id: deploy_community
         run: |
-          gcloud run deploy community-service \
+          URL=$(gcloud run deploy community-service \
             --image ${REGION}-docker.pkg.dev/${PROJECT_ID}/${GAR_NAME}/community-service:latest \
             --region ${REGION} \
             --platform managed \
             --allow-unauthenticated \
-            --port 8080
+            --set-env-vars "MONGO_URI=${{ secrets.MONGO_URI }},JWT_SECRET=${{ secrets.JWT_SECRET }}" \
+            --port 8080 \
+            --format='value(status.url)')
+          echo "URL=$URL" >> $GITHUB_OUTPUT
 
       # Gateway
       - name: Build Gateway
@@ -97,4 +113,5 @@ jobs:
             --region ${REGION} \
             --platform managed \
             --allow-unauthenticated \
+            --set-env-vars "AUTH_SERVICE_URL=${{ steps.deploy_auth.outputs.URL }}/graphql,COMMUNITY_SERVICE_URL=${{ steps.deploy_community.outputs.URL }}/graphql,BUSINESS_EVENTS_SERVICE_URL=${{ steps.deploy_business.outputs.URL }}/graphql,AI_SERVICE_URL=${{ steps.deploy_ai.outputs.URL }}/graphql" \
             --port 8080
