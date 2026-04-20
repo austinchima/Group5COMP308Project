@@ -1,40 +1,129 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import CreateBusinessModal from "./CreateBusinessModal.tsx";
 import CreateDealModal from "./CreateDealModal.tsx";
 import ReviewReplyForm from "./ReviewReplyForm.tsx";
 
+const API_URL = import.meta.env.VITE_GATEWAY_URL || "http://localhost:4000/graphql";
+
+async function graphqlRequest<T>(
+  query: string,
+  variables: Record<string, unknown> = {},
+  requiresAuth = false,
+) {
+  const token = localStorage.getItem("token");
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  if (requiresAuth && token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(API_URL, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ query, variables }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Request failed with status ${response.status}`);
+  }
+
+  const payload = await response.json();
+  if (payload.errors?.length) {
+    throw new Error(payload.errors[0].message || "GraphQL request failed.");
+  }
+
+  return payload.data as T;
+}
+
+const GET_BUSINESSES = `
+  query GetBusinesses {
+    businesses {
+      id
+      ownerId
+      ownerName
+      name
+      description
+      category
+      location
+      imageUrl
+      deals
+      createdAt
+    }
+  }
+`;
+
+const CREATE_BUSINESS = `
+  mutation CreateBusiness($name: String!, $description: String!, $category: String, $location: String) {
+    createBusiness(name: $name, description: $description, category: $category, location: $location) {
+      id
+      name
+    }
+  }
+`;
+
 export default function Business() {
   const [showBusinessModal, setShowBusinessModal] = useState(false);
   const [showDealModal, setShowDealModal] = useState(false);
+  const [businesses, setBusinesses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [businesses, setBusinesses] = useState<
-    {
-      id: number;
-      name: string;
-      category: string;
-      description: string;
-      deals: { title: string; description: string }[];
-      reviews: { author: string; rating: number; content: string; sentiment: string }[];
-    }[]
-  >([]);
+  const currentUser = React.useMemo(() => {
+    try {
+      const raw = localStorage.getItem("user");
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }, []);
 
-  const handleNewBusiness = (biz: {
+  const isOwner = currentUser?.role === "BUSINESS_OWNER";
+
+  const fetchBusinesses = async () => {
+    try {
+      setLoading(true);
+      const data = await graphqlRequest<{ businesses: any[] }>(GET_BUSINESSES);
+      setBusinesses(data.businesses || []);
+    } catch (err) {
+      console.error("Failed to fetch businesses:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBusinesses();
+
+    const handleFab = (e: any) => {
+      if (e.detail.pathname === "/business" && isOwner) {
+        setShowBusinessModal(true);
+      }
+    };
+
+    window.addEventListener("commons-fab-click", handleFab);
+    return () => window.removeEventListener("commons-fab-click", handleFab);
+  }, [isOwner]);
+
+  const handleNewBusiness = async (biz: {
     name: string;
     category: string;
     description: string;
     contact: string;
   }) => {
-    setBusinesses([
-      ...businesses,
-      {
-        id: Date.now(),
+    try {
+      await graphqlRequest(CREATE_BUSINESS, {
         name: biz.name,
-        category: biz.category,
         description: biz.description,
-        deals: [],
-        reviews: [],
-      },
-    ]);
+        category: biz.category,
+        location: biz.contact // Mapping contact to location in the backend model
+      }, true);
+      await fetchBusinesses();
+    } catch (e) {
+      console.error("Creation failed:", e);
+      alert("Failed to list business. Make sure you are logged in as a Business Owner.");
+    }
   };
 
   const handleNewDeal = (deal: {
@@ -67,29 +156,35 @@ export default function Business() {
             </p>
           </div>
           <div className="flex gap-4">
-            <button
-              onClick={() => setShowDealModal(true)}
-              className="bg-secondary-container text-on-secondary-container px-6 py-3 rounded-full font-bold hover:brightness-95 transition-all flex items-center gap-2"
-            >
-              <span className="material-symbols-outlined">local_offer</span>
-              New Deal
-            </button>
-            <button
-              onClick={() => setShowBusinessModal(true)}
-              className="bg-linear-to-r from-primary to-primary-dim text-on-primary px-8 py-3 rounded-full font-extrabold shadow-lg shadow-primary/20 active:scale-95 duration-200"
-            >
-              List Business
-            </button>
+            {isOwner && (
+              <>
+                <button
+                  onClick={() => setShowDealModal(true)}
+                  className="bg-secondary-container text-on-secondary-container px-6 py-3 rounded-full font-bold hover:brightness-95 transition-all flex items-center gap-2"
+                >
+                  <span className="material-symbols-outlined">local_offer</span>
+                  New Deal
+                </button>
+                <button
+                  onClick={() => setShowBusinessModal(true)}
+                  className="bg-linear-to-r from-primary to-primary-dim text-on-primary px-8 py-3 rounded-full font-extrabold shadow-lg shadow-primary/20 active:scale-95 duration-200"
+                >
+                  List Business
+                </button>
+              </>
+            )}
           </div>
         </div>
       </header>
 
       <div className="space-y-8">
-        {businesses.length === 0 ? (
+        {loading ? (
+          <p>Loading businesses...</p>
+        ) : businesses.length === 0 ? (
           <div className="text-center py-16 text-on-surface-variant">
             <span className="material-symbols-outlined text-5xl mb-3 block opacity-40">storefront</span>
             <p className="font-bold text-lg">No businesses listed yet.</p>
-            <p className="text-sm mt-1">Click "List Business" to add your first local business.</p>
+            {isOwner && <p className="text-sm mt-1">Click "List Business" to add your first local business.</p>}
           </div>
         ) : (
         businesses.map((bus) => (
@@ -111,7 +206,14 @@ export default function Business() {
                   {bus.description}
                 </p>
 
-                {bus.deals.length > 0 && (
+                {bus.location && (
+                  <p className="text-sm text-on-surface-variant mb-4 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-sm">location_on</span>
+                    {bus.location}
+                  </p>
+                )}
+
+                {bus.deals && bus.deals.length > 0 && (
                   <div className="mb-6">
                     <h4 className="font-bold mb-3 flex items-center gap-2">
                       <span className="material-symbols-outlined text-tertiary">
@@ -120,61 +222,19 @@ export default function Business() {
                       Active Deals
                     </h4>
                     <div className="grid gap-4">
-                      {bus.deals.map((deal, idx) => (
+                      {bus.deals.map((deal: string, idx: number) => (
                         <div
                           key={idx}
                           className="bg-tertiary-container/10 p-4 rounded-lg border border-tertiary/20"
                         >
-                          <h5 className="font-bold text-tertiary-fixed-dim">
-                            {deal.title}
-                          </h5>
                           <p className="text-sm text-on-surface-variant">
-                            {deal.description}
+                            {deal}
                           </p>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
-              </div>
-
-              <div className="w-full md:w-1/3 bg-surface-container-low p-6 rounded-xl">
-                <h4 className="font-bold mb-4">Recent Reviews</h4>
-                <div className="space-y-4">
-                  {bus.reviews.map((rev, idx) => (
-                    <div
-                      key={idx}
-                      className="bg-white p-4 rounded-lg shadow-sm"
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <span className="font-bold text-sm">{rev.author}</span>
-                        <div className="flex text-tertiary-fixed-dim text-sm">
-                          {"★".repeat(rev.rating)}
-                          {"☆".repeat(5 - rev.rating)}
-                        </div>
-                      </div>
-                      <p className="text-sm text-on-surface-variant mb-3">
-                        {rev.content}
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-xs text-primary">
-                          auto_awesome
-                        </span>
-                        <span
-                          className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${rev.sentiment === "POSITIVE" ? "bg-primary-container text-on-primary-container" : "bg-surface-variant text-on-surface-variant"}`}
-                        >
-                          {rev.sentiment}
-                        </span>
-                      </div>
-                      <ReviewReplyForm
-                        reviewAuthor={rev.author}
-                        onSubmit={(reply) =>
-                          console.log("Reply to", rev.author, ":", reply)
-                        }
-                      />
-                    </div>
-                  ))}
-                </div>
               </div>
             </div>
           </div>

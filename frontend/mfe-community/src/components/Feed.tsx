@@ -309,6 +309,15 @@ export default function Feed() {
     };
 
     void loadPosts();
+
+    const handleFab = (e: any) => {
+      if (e.detail.pathname === "/feed") {
+        setShowCreatePost(true);
+      }
+    };
+
+    window.addEventListener("commons-fab-click", handleFab);
+    return () => window.removeEventListener("commons-fab-click", handleFab);
   }, []);
 
   const refreshPostSummary = async (postId: string, text: string) => {

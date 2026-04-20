@@ -15,11 +15,15 @@ export default function CreateBusinessModal({ isOpen, onClose, onSubmit }: Creat
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    await new Promise(r => setTimeout(r, 600));
-    onSubmit(form);
-    setForm({ name: '', category: 'Retail', description: '', contact: '' });
-    setLoading(false);
-    onClose();
+    try {
+      await onSubmit(form);
+      setForm({ name: '', category: 'Retail', description: '', contact: '' });
+      onClose();
+    } catch (err) {
+      console.error("Submit failed", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -84,7 +88,7 @@ export default function CreateBusinessModal({ isOpen, onClose, onSubmit }: Creat
           <button 
             type="submit" 
             disabled={loading}
-            className="w-full bg-gradient-to-r from-primary to-primary-dim text-on-primary py-3 rounded-full font-bold shadow-lg shadow-primary/20 active:scale-95 duration-200 mt-4 disabled:opacity-60 flex items-center justify-center gap-2"
+            className="w-full bg-linear-to-r from-primary to-primary-dim text-on-primary py-3 rounded-full font-bold shadow-lg shadow-primary/20 active:scale-95 duration-200 mt-4 disabled:opacity-60 flex items-center justify-center gap-2"
           >
             {loading && <div className="w-4 h-4 border-2 border-on-primary/30 border-t-on-primary rounded-full animate-spin"></div>}
             List Business

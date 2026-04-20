@@ -9,6 +9,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const role: UserRole = user?.role ?? "Resident";
   const navItems = getNavForRole(role);
 
+  const isFabVisible = React.useMemo(() => {
+    if (location.pathname === "/feed") return true;
+    if (location.pathname === "/help") return true;
+    if (location.pathname === "/events" && (role === "Resident" || role === "Community Organizer")) return true;
+    if (location.pathname === "/business" && role === "Business Owner") return true;
+    return false;
+  }, [location.pathname, role]);
+
+  const handleFabClick = () => {
+    const event = new CustomEvent("commons-fab-click", { detail: { pathname: location.pathname } });
+    window.dispatchEvent(event);
+  };
+
   return (
     <div className="font-body selection:bg-primary-fixed selection:text-on-primary-container min-h-screen">
       {/* Top Navigation Bar */}
@@ -38,7 +51,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <img
               alt="User Profile"
               className="w-10 h-10 rounded-full border-2 border-primary-container cursor-pointer hover:brightness-95 transition-all"
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDoLpXh3J9rjhr3RMmjlqDe8srj1C-8eb-DLYNhSTjrqj9iocSpFeqvrHhKisbIUEwcpXg5rQnCnDbA69sGZfwnuYBsmZrecUGiyBQq734xgP8W9bxS86jVrDRzNU4p2sH_-m84GGOTOGg7ir1wml12-sheF9nXgVZlY923CzpgShnAP2ZVFtHdY4hVeUBuyRmJqaVdSqnDOufADJSFCEPT75YFDHNDhfIPqruge-6DrZEVp-1gkrqfoq-MocHUfzXY5tIlrCJGKvI"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDoLpXh3J9rjhr3RMmjlqDe8srj1C-8eb-DLYNhSTjrqj9iocSpFeqvrHhKisbIUEwcpXg5rQnCnDbA69sGZfwnuYBsmZrecUGiyBQq734xgP8W9bxS86jVrDRzNU4p2sH_-m84GGOTOGg7ir1wml12-sheF9nXgVZlY923CzpgShnAP2ZVFtHdY4hVeUBuyRmJqaVdSqnDOufADJSFCEPT75YFDHNDhfIPruge-6DrZEVp-1gkrqfoq-MocHUfzXY5tIlrCJGKvI"
             />
           </Link>
         </div>
@@ -115,9 +128,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </nav>
 
       {/* Floating Action Button */}
-      <button className="hidden max-md:flex fixed bottom-24 right-6 bg-linear-to-br from-primary-dim to-primary text-on-primary w-14 h-14 rounded-full shadow-2xl items-center justify-center active:scale-95 transition-all z-40">
-        <span className="material-symbols-outlined text-3xl">add</span>
-      </button>
+      {isFabVisible && (
+        <button 
+          onClick={handleFabClick}
+          className="hidden max-md:flex fixed bottom-24 right-6 bg-linear-to-br from-primary-dim to-primary text-on-primary w-14 h-14 rounded-full shadow-2xl items-center justify-center active:scale-95 transition-all z-40"
+        >
+          <span className="material-symbols-outlined text-3xl">add</span>
+        </button>
+      )}
     </div>
   );
 }

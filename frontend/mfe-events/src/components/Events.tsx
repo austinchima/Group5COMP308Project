@@ -1,8 +1,8 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import CreateEventModal, { EventFormData } from './CreateEventModal';
-import EditEventModal from './EditEventModal';
-import VolunteerMatching from './VolunteerMatching';
-import SmartTimingPanel from './SmartTimingPanel';
+import React, { useEffect, useMemo, useState } from "react";
+import CreateEventModal from "./CreateEventModal.tsx";
+import EditEventModal from "./EditEventModal.tsx";
+import SmartTimingPanel from "./SmartTimingPanel.tsx";
+import VolunteerMatching from "./VolunteerMatching.tsx";
 
 interface Volunteer {
   userId: string;
@@ -15,124 +15,26 @@ interface EventItem {
   organizerName: string;
   title: string;
   description: string;
-  category?: string | null;
+  category?: string;
   date: string;
-  time?: string | null;
-  location?: string | null;
-  capacity?: number | null;
-  volunteers?: Volunteer[];
-  suggestedBestTime?: string | null;
-  createdAt?: string | null;
+  time?: string;
+  location?: string;
+  capacity?: number;
+  volunteers: Volunteer[];
+  suggestedBestTime?: string;
 }
 
-const API_URL = import.meta.env.VITE_GATEWAY_URL || 'http://localhost:4000/graphql';
+interface EventFormData {
+  title: string;
+  description: string;
+  category: string;
+  date: string;
+  time: string;
+  location: string;
+  capacity: string;
+}
 
-const GET_EVENTS_STR = `
-  query GetEvents {
-    events {
-      id
-      organizerId
-      organizerName
-      title
-      description
-      category
-      date
-      time
-      location
-      capacity
-      volunteers {
-        userId
-        userName
-      }
-      suggestedBestTime
-      createdAt
-    }
-  }
-`;
-
-const CREATE_EVENT_STR = `
-  mutation CreateEvent(
-    $title: String!
-    $description: String!
-    $category: String
-    $date: String!
-    $time: String
-    $location: String
-    $capacity: Int
-  ) {
-    createEvent(
-      title: $title
-      description: $description
-      category: $category
-      date: $date
-      time: $time
-      location: $location
-      capacity: $capacity
-    ) {
-      id
-      organizerId
-      organizerName
-      title
-      description
-      category
-      date
-      time
-      location
-      capacity
-      volunteers {
-        userId
-        userName
-      }
-      suggestedBestTime
-      createdAt
-    }
-  }
-`;
-
-const EDIT_EVENT_STR = `
-  mutation EditEvent(
-    $eventId: ID!
-    $title: String!
-    $description: String!
-    $category: String
-    $date: String!
-    $time: String
-    $location: String
-    $capacity: Int
-  ) {
-    editEvent(
-      eventId: $eventId
-      title: $title
-      description: $description
-      category: $category
-      date: $date
-      time: $time
-      location: $location
-      capacity: $capacity
-    ) {
-      id
-      title
-      description
-      category
-      date
-      time
-      location
-      capacity
-    }
-  }
-`;
-
-const ASSIGN_VOLUNTEER_STR = `
-  mutation AssignVolunteer($eventId: ID!, $userId: String!, $userName: String!) {
-    assignVolunteer(eventId: $eventId, userId: $userId, userName: $userName) {
-      id
-      volunteers {
-        userId
-        userName
-      }
-    }
-  }
-`;
+const API_URL = import.meta.env.VITE_GATEWAY_URL || "http://localhost:4000/graphql";
 
 async function graphqlRequest<T>(
   query: string,
@@ -166,6 +68,58 @@ async function graphqlRequest<T>(
   return payload.data as T;
 }
 
+const GET_EVENTS_STR = `
+  query GetEvents {
+    events {
+      id
+      organizerId
+      organizerName
+      title
+      description
+      category
+      date
+      time
+      location
+      capacity
+      volunteers {
+        userId
+        userName
+      }
+      suggestedBestTime
+    }
+  }
+`;
+
+const CREATE_EVENT_STR = `
+  mutation CreateEvent($title: String!, $description: String!, $category: String, $date: String!, $time: String, $location: String, $capacity: Int) {
+    createEvent(title: $title, description: $description, category: $category, date: $date, time: $time, location: $location, capacity: $capacity) {
+      id
+      title
+    }
+  }
+`;
+
+const EDIT_EVENT_STR = `
+  mutation EditEvent($eventId: ID!, $title: String!, $description: String!, $category: String, $date: String!, $time: String, $location: String, $capacity: Int) {
+    updateEvent(eventId: $eventId, title: $title, description: $description, category: $category, date: $date, time: $time, location: $location, capacity: $capacity) {
+      id
+      title
+    }
+  }
+`;
+
+const ASSIGN_VOLUNTEER_STR = `
+  mutation AssignVolunteer($eventId: ID!, $userId: String!, $userName: String!) {
+    assignVolunteer(eventId: $eventId, userId: $userId, userName: $userName) {
+      id
+      volunteers {
+        userId
+        userName
+      }
+    }
+  }
+`;
+
 export default function Events() {
   const [showCreateEvent, setShowCreateEvent] = useState(false);
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -175,6 +129,7 @@ export default function Events() {
   const fetchEvents = async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await graphqlRequest<{ events: EventItem[] }>(GET_EVENTS_STR);
       setEvents(data.events || []);
     } catch (err) {
@@ -184,9 +139,33 @@ export default function Events() {
     }
   };
 
+  const currentUser = useMemo(() => {
+    try {
+      const raw = localStorage.getItem("user");
+      if (!raw) return null;
+      return JSON.parse(raw) as { id: string; name: string; role: string };
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const isOrganizer = currentUser?.role === "COMMUNITY_ORGANIZER";
+  const isAllowedToCreate = isOrganizer || currentUser?.role === "RESIDENT";
+
+  const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
+
   useEffect(() => {
     fetchEvents();
-  }, []);
+
+    const handleFab = (e: any) => {
+      if (e.detail.pathname === "/events" && isAllowedToCreate) {
+        setShowCreateEvent(true);
+      }
+    };
+
+    window.addEventListener("commons-fab-click", handleFab);
+    return () => window.removeEventListener("commons-fab-click", handleFab);
+  }, [isAllowedToCreate]);
 
   const selectedEvent = events[0] ?? null;
 
@@ -204,23 +183,9 @@ export default function Events() {
       await fetchEvents();
     } catch (e) {
       console.error("Created failed:", e);
-      alert("Failed to create event. Make sure you are logged in as a Community Organizer.");
+      alert("Failed to create event. Make sure you are logged in correctly.");
     }
   };
-
-  const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
-
-  const currentUser = useMemo(() => {
-    try {
-      const raw = localStorage.getItem("user");
-      if (!raw) return null;
-      return JSON.parse(raw) as { id: string; name: string; role: string };
-    } catch {
-      return null;
-    }
-  }, []);
-
-  const isOrganizer = currentUser?.role === "COMMUNITY_ORGANIZER";
 
   const handleEditEvent = async (id: string, data: EventFormData) => {
     try {
@@ -256,7 +221,7 @@ export default function Events() {
       await fetchEvents();
     } catch (e) {
       console.error("Volunteer failed:", e);
-      alert("Failed to volunteer for event. You might need deeper access.");
+      alert("Failed to volunteer for event.");
     }
   };
 
@@ -269,13 +234,13 @@ export default function Events() {
               {isOrganizer ? "Organizer Hub" : "Community Events Hub"}
             </h1>
             <p className="text-on-surface-variant max-w-xl text-lg">
-              {isOrganizer
+              {isAllowedToCreate
                 ? "Curate meaningful moments. Manage your events, volunteers, and scheduling details."
                 : "Discover and participate in events around your neighborhood."}
             </p>
           </div>
 
-          {isOrganizer && (
+          {isAllowedToCreate && (
             <div className="flex gap-4">
               <button
                 onClick={() => setShowCreateEvent(true)}

@@ -50,6 +50,16 @@ export default function Help() {
       ...alerts,
     ]);
   };
+  React.useEffect(() => {
+    const handleFab = (e: any) => {
+      if (e.detail.pathname === "/help") {
+        setShowHelpModal(true);
+      }
+    };
+
+    window.addEventListener("commons-fab-click", handleFab);
+    return () => window.removeEventListener("commons-fab-click", handleFab);
+  }, []);
 
   return (
     <>

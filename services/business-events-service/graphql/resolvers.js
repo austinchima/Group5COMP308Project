@@ -81,8 +81,8 @@ const resolvers = {
     ) => {
       requireAuth(user);
 
-      if (user.role !== 'COMMUNITY_ORGANIZER') {
-        throw new Error('Only community organizers can create events');
+      if (user.role !== 'COMMUNITY_ORGANIZER' && user.role !== 'RESIDENT') {
+        throw new Error('Only community organizers and residents can create events');
       }
 
       return Event.create({
