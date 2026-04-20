@@ -79,7 +79,7 @@ export default function Business() {
     }
   }, []);
 
-  const isOwner = currentUser?.role === "BUSINESS_OWNER";
+  const isOwner = currentUser?.role?.toUpperCase() === "BUSINESS_OWNER" || currentUser?.role === "Business Owner";
 
   const fetchBusinesses = async () => {
     try {

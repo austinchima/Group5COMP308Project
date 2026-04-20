@@ -149,8 +149,8 @@ export default function Events() {
     }
   }, []);
 
-  const isOrganizer = currentUser?.role === "COMMUNITY_ORGANIZER";
-  const isAllowedToCreate = isOrganizer || currentUser?.role === "RESIDENT";
+  const isOrganizer = currentUser?.role?.toUpperCase() === "COMMUNITY_ORGANIZER" || currentUser?.role === "Community Organizer";
+  const isAllowedToCreate = isOrganizer || currentUser?.role?.toUpperCase() === "RESIDENT" || currentUser?.role === "Resident";
 
   const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
 
