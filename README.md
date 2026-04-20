@@ -1,3 +1,5 @@
+# Link to Live Website — https://the-commons-shell.vercel.app/
+
 # The Commons — Community Engagement Platform
 
 > AI-driven micro-frontend web app connecting neighborhoods through local news, events, mutual help, and business support.
