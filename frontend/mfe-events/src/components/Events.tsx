@@ -108,6 +108,14 @@ const EDIT_EVENT_STR = `
   }
 `;
 
+const CREATE_NOTIFICATION_STR = `
+  mutation CreateNotification($recipientId: String!, $type: String!, $message: String!, $link: String) {
+    createNotification(recipientId: $recipientId, type: $type, message: $message, link: $link) {
+      id
+    }
+  }
+`;
+
 const ASSIGN_VOLUNTEER_STR = `
   mutation AssignVolunteer($eventId: ID!, $userId: String!, $userName: String!) {
     assignVolunteer(eventId: $eventId, userId: $userId, userName: $userName) {
@@ -218,6 +226,22 @@ export default function Events() {
         userId: currentUser.id,
         userName: currentUser.name,
       }, true);
+      
+      // Trigger Notification
+      const event = events.find(e => e.id === eventId);
+      if (event && event.organizerId !== currentUser.id) {
+        try {
+          await graphqlRequest(CREATE_NOTIFICATION_STR, {
+            recipientId: event.organizerId,
+            type: 'VOLUNTEER',
+            message: `${currentUser.name} signed up to volunteer for your event: "${event.title}"`,
+            link: '/events'
+          }, true);
+        } catch (notifErr) {
+          console.error("Notification failed (non-critical):", notifErr);
+        }
+      }
+
       await fetchEvents();
     } catch (e) {
       console.error("Volunteer failed:", e);

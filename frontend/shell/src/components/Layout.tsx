@@ -2,6 +2,7 @@ import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { getAuthUser, getNavForRole } from "../hooks/useAuth.ts";
 import type { UserRole } from "../hooks/useAuth.ts";
+import NotificationTray from "./NotificationTray.tsx";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
@@ -42,11 +43,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               type="text"
             />
           </div>
-          <button className="p-2 rounded-full hover:bg-emerald-100/50 transition-colors">
-            <span className="material-symbols-outlined text-emerald-800">
-              notifications
-            </span>
-          </button>
+          <NotificationTray />
           <Link to="/profile">
             <img
               alt="User Profile"

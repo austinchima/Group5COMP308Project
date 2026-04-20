@@ -48,6 +48,14 @@ const CREATE_EMERGENCY_ALERT = `
   }
 `;
 
+const OFFER_HELP_MUTATION = `
+  mutation OfferHelp($requestId: ID!) {
+    offerHelpToRequest(requestId: $requestId) {
+      id
+    }
+  }
+`;
+
 async function graphqlRequest<T>(
   query: string,
   variables: Record<string, unknown> = {},
@@ -127,6 +135,16 @@ export default function Help() {
       await fetchData();
     } catch (err) {
       window.alert("Failed to broadcast alert");
+    }
+  };
+
+  const handleOfferHelp = async (requestId: string) => {
+    try {
+      await graphqlRequest(OFFER_HELP_MUTATION, { requestId }, true);
+      window.alert("Thank you for offering help!");
+      await fetchData();
+    } catch (err) {
+      window.alert("Failed to offer help: " + (err as Error).message);
     }
   };
 
@@ -251,7 +269,10 @@ export default function Help() {
               </div>
 
               <div className="mt-4 pt-4 border-t border-on-surface/5">
-                <button className="text-primary font-bold hover:underline">
+                <button 
+                  onClick={() => handleOfferHelp(req.id)}
+                  className="text-primary font-bold hover:underline py-1"
+                >
                   Offer Help
                 </button>
               </div>
