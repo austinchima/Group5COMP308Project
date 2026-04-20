@@ -1,51 +1,18 @@
-import dotenv from "dotenv";
-import mongoose from "mongoose";
-import { MongoMemoryServer } from "mongodb-memory-server";
+import mongoose from 'mongoose';
 
-dotenv.config();
-
-let memoryServer;
-
-async function connectWithFallback(preferredUri, dbName, label) {
-  if (preferredUri) {
-    try {
-      await mongoose.connect(preferredUri, { serverSelectionTimeoutMS: 4000 });
-      console.log(`${label} DB connected`);
-      return;
-    } catch (error) {
-      console.warn(
-        `${label} DB unavailable at configured URI, switching to in-memory MongoDB:`,
-        error.message,
-      );
-    }
+async function connectDB() {
+  const uri = process.env.MONGO_URI;
+  if (!uri) {
+    throw new Error('MONGO_URI is not defined in environment variables');
   }
 
-  memoryServer = await MongoMemoryServer.create({
-    instance: { dbName },
-  });
-  const memoryUri = memoryServer.getUri();
-  console.log(`${label} service using in-memory MongoDB`);
-  await mongoose.connect(memoryUri);
-  console.log(`${label} DB connected`);
-}
-
-const connectDB = async () => {
   try {
-    await connectWithFallback(
-      process.env.MONGO_URI,
-      "the-commons-business-events",
-      "Business Events",
-    );
+    await mongoose.connect(uri);
+    console.log('Business Events DB connected successfully');
   } catch (error) {
-    console.error("Business Events DB connection error:", error.message);
+    console.error('Business Events DB connection error:', error.message);
     process.exit(1);
   }
-};
-
-process.on("SIGINT", async () => {
-  if (memoryServer) {
-    await memoryServer.stop();
-  }
-});
+}
 
 export default connectDB;
