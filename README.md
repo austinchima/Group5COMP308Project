@@ -144,13 +144,29 @@ npm run build    # Builds all 4 packages
 
 ## Environment Variables
 
-Copy `.env.example` to `.env` and configure:
+Each backend service and the gateway requires a `.env` file for configuration. Templates are provided as `.env.example` in each directory.
 
-```env
-GEMINI_API_KEY=your_google_gemini_api_key
-MONGODB_URI=mongodb://localhost:27017/the-commons
-JWT_SECRET=your_jwt_secret
+### Quick Setup
+
+For each directory containing a `.env.example`, copy it to `.env`:
+
+```bash
+# Example for AI Service
+cp services/ai-service/.env.example services/ai-service/.env
 ```
+
+### Required Keys
+
+| Service | File | Key Variables |
+| :--- | :--- | :--- |
+| **Gateway** | `gateway/.env` | Service URLs, Port (4000) |
+| **AI Service** | `services/ai-service/.env` | `GEMINI_API_KEY` |
+| **Auth Service** | `services/auth-service/.env` | `MONGO_URI`, `JWT_SECRET` |
+| **Business/Events** | `services/business-.../.env` | `MONGO_URI`, `JWT_SECRET` |
+| **Community** | `services/community-.../.env` | `MONGO_URI`, `JWT_SECRET` |
+
+> [!TIP]
+> Make sure to update the `JWT_SECRET` with a secure random string and provide your own `GEMINI_API_KEY` in the AI service.
 
 ---
 
