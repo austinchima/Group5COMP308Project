@@ -68,6 +68,7 @@ const typeDefs = gql`
   }
 
   type Query {
+    posts: [Post]
     helpRequests: [HelpRequest]
     emergencyAlerts: [EmergencyAlert]
     notifications: [Notification]
@@ -82,8 +83,6 @@ const typeDefs = gql`
     markNotificationAsRead(notificationId: ID!): Notification
     markAllNotificationsAsRead: Boolean
     createNotification(recipientId: String!, type: String!, message: String!, link: String): Notification
-
-    createPost(title: String!, content: String!, tags: [String]): Post
 
     createHelpRequest(title: String!, description: String!, category: String, urgency: String, neededSkills: [String], location: String): HelpRequest
     offerHelpToRequest(requestId: ID!): HelpRequest
