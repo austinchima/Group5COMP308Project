@@ -18,6 +18,7 @@ const typeDefs = gql`
     summary: String
     comments: [Comment]
     tags: [String]
+    likes: [String]
     createdAt: String
   }
 
@@ -62,6 +63,7 @@ const typeDefs = gql`
     editPost(postId: ID!, title: String!, content: String!): Post
     updatePostSummary(postId: ID!, summary: String!): Post
     addComment(postId: ID!, text: String!): Post
+    toggleLikePost(postId: ID!): Post
 
     createHelpRequest(title: String!, description: String!, neededSkills: [String], location: String): HelpRequest
     updateMatchedVolunteers(helpRequestId: ID!, volunteers: [VolunteerInput!]!): HelpRequest

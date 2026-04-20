@@ -3,6 +3,9 @@ export function formatRelativeTime(dateString?: string): string {
 
   const date = new Date(dateString);
   const now = new Date();
+  
+  if (isNaN(date.getTime())) return "Just now";
+  
   const diffMs = now.getTime() - date.getTime();
   
   if (diffMs < 60000) return "Just now";

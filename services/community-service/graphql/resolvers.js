@@ -54,6 +54,22 @@ const resolvers = {
       await post.save();
       return post;
     },
+    
+    toggleLikePost: async (_, { postId }, { user }) => {
+      requireAuth(user);
+      const post = await Post.findById(postId);
+      if (!post) throw new Error('Post not found');
+      
+      const likeIndex = post.likes.indexOf(user.id);
+      if (likeIndex > -1) {
+        post.likes.splice(likeIndex, 1);
+      } else {
+        post.likes.push(user.id);
+      }
+      
+      await post.save();
+      return post;
+    },
 
     createHelpRequest: async (_, { title, description, neededSkills, location }, { user }) => {
       requireAuth(user);

@@ -23,6 +23,7 @@ interface BackendPost {
   summary?: string | null;
   tags?: string[] | null;
   createdAt?: string;
+  likes?: string[] | null;
   comments?: BackendComment[] | null;
 }
 
@@ -42,6 +43,7 @@ interface FeedPost {
   content: string;
   summary: string;
   time: string;
+  likes: string[];
   comments: FeedComment[];
 }
 
@@ -58,6 +60,7 @@ const POSTS_QUERY = `
       content
       summary
       tags
+      likes
       createdAt
       comments {
         id
@@ -78,6 +81,7 @@ const CREATE_POST_MUTATION = `
       content
       summary
       tags
+      likes
       createdAt
       comments {
         id
@@ -124,6 +128,15 @@ const EDIT_POST_MUTATION = `
       id
       title
       content
+    }
+  }
+`;
+
+const TOGGLE_LIKE_MUTATION = `
+  mutation ToggleLike($postId: ID!) {
+    toggleLikePost(postId: $postId) {
+      id
+      likes
     }
   }
 `;
@@ -254,6 +267,7 @@ function mapPost(post: BackendPost): FeedPost {
     content: post.content,
     summary: post.summary?.trim() ?? "",
     time: post.createdAt || new Date().toISOString(),
+    likes: post.likes || [],
     comments: (post.comments ?? []).map(mapComment),
   };
 }
@@ -383,6 +397,29 @@ export default function Feed() {
           : post,
       ),
     );
+  };
+
+  const handleToggleLike = async (postId: string) => {
+    if (!currentUserId) {
+      alert("You must be logged in to like posts.");
+      return;
+    }
+
+    try {
+      const data = await graphqlRequest<{ toggleLikePost: { id: string; likes: string[] } }>(
+        TOGGLE_LIKE_MUTATION,
+        { postId },
+        true
+      );
+
+      setPosts((currentPosts) =>
+        currentPosts.map((post) =>
+          post.id === postId ? { ...post, likes: data.toggleLikePost.likes } : post
+        )
+      );
+    } catch (err) {
+      console.error("Like toggle failed:", err);
+    }
   };
 
   const visiblePosts =
@@ -546,11 +583,20 @@ export default function Feed() {
               )}
 
               <div className="mt-4 pt-4 border-t border-on-surface/5 flex gap-4">
-                <button className="flex items-center gap-2 text-on-surface-variant hover:text-primary transition-colors">
-                  <span className="material-symbols-outlined text-sm">
-                    thumb_up
+                <button
+                  onClick={() => handleToggleLike(post.id)}
+                  className={`flex items-center gap-2 transition-colors ${
+                    post.likes.includes(currentUserId)
+                      ? "text-primary"
+                      : "text-on-surface-variant hover:text-primary"
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: post.likes.includes(currentUserId) ? "'FILL' 1" : "'FILL' 0" }}>
+                    favorite
                   </span>
-                  <span className="text-sm font-bold">Like</span>
+                  <span className="text-sm font-bold italic">
+                    {post.likes.length > 0 ? post.likes.length : ""} Like{post.likes.length !== 1 ? "s" : ""}
+                  </span>
                 </button>
                 {post.authorId === currentUserId && currentUserId !== "" && (
                   <button

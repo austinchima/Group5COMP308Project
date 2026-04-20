@@ -17,6 +17,7 @@ const postSchema = new mongoose.Schema(
     content: { type: String, required: true },
     summary: { type: String, default: '' },
     comments: [commentSchema],
+    likes: [{ type: String }],
     tags: [{ type: String }]
   },
   { timestamps: true }
