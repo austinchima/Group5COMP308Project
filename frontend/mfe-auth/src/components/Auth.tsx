@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { motion } from "motion/react";
 
 type DisplayRole = "Resident" | "Business Owner" | "Community Organizer";
 type BackendRole = "RESIDENT" | "BUSINESS_OWNER" | "COMMUNITY_ORGANIZER";
@@ -127,7 +128,6 @@ const REGISTER_MUTATION = `
 
 export default function Auth({ onAuth }: { onAuth: () => void }) {
   useEffect(() => {
-    // Failsafe: Eradicate JWT and user payload whenever the Auth component mounts.
     localStorage.removeItem("token");
     localStorage.removeItem("user");
   }, []);
@@ -163,165 +163,174 @@ export default function Auth({ onAuth }: { onAuth: () => void }) {
     return true;
   };
 
-  const handleAuthSubmit = async (e: React.SubmitEvent) => {
+  const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     if (!validate()) return;
-
     setLoading(true);
 
     try {
       if (isLogin) {
-        const data = await graphqlRequest<{ login: AuthPayload }>(
-          LOGIN_MUTATION,
-          {
-            email: authForm.email.trim(),
-            password: authForm.password,
-          },
-        );
+        const data = await graphqlRequest<{ login: AuthPayload }>(LOGIN_MUTATION, {
+          email: authForm.email.trim(),
+          password: authForm.password,
+        });
         persistAuth(data.login);
       } else {
-        const data = await graphqlRequest<{ register: AuthPayload }>(
-          REGISTER_MUTATION,
-          {
-            name: authForm.name.trim(),
-            email: authForm.email.trim(),
-            password: authForm.password,
-            role: ROLE_TO_BACKEND[authForm.role],
-            location: null,
-            interests: [],
-          },
-        );
+        const data = await graphqlRequest<{ register: AuthPayload }>(REGISTER_MUTATION, {
+          name: authForm.name.trim(),
+          email: authForm.email.trim(),
+          password: authForm.password,
+          role: ROLE_TO_BACKEND[authForm.role],
+          location: null,
+          interests: [],
+        });
         persistAuth(data.register);
       }
-
       onAuth();
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Authentication failed.";
-      setError(message);
+    } catch (err: any) {
+      setError(err.message || "Authentication failed.");
     } finally {
       setLoading(false);
     }
   };
 
+  const roles: { id: DisplayRole; icon: string; desc: string }[] = [
+    { id: "Resident", icon: "person", desc: "Join your neighbors, share news, and offer help." },
+    { id: "Business Owner", icon: "storefront", desc: "List your business, post deals, and engage locals." },
+    { id: "Community Organizer", icon: "groups", desc: "Start projects, organize events, and lead change." },
+  ];
+
   return (
-    <div className="min-h-screen bg-surface flex items-center justify-center p-4 font-body">
-      <div className="w-full max-w-md bg-surface-container-lowest p-8 rounded-xl shadow-sm border border-on-surface/5">
-        <h1 className="text-3xl font-extrabold tracking-tight text-emerald-900 font-headline text-center mb-2">
-          The Commons
-        </h1>
-        <h2 className="font-headline text-xl font-bold mb-6 text-center text-on-surface-variant">
-          {isLogin ? "Welcome Back" : "Join the Community"}
-        </h2>
-
-        {error && (
-          <div className="mb-4 p-3 bg-error-container/10 border border-error/20 rounded-lg text-error text-sm font-medium flex items-center gap-2">
-            <span className="material-symbols-outlined text-sm">error</span>
-            {error}
-          </div>
-        )}
-
-        <form className="space-y-4" onSubmit={handleAuthSubmit}>
-          {!isLogin && (
-            <div>
-              <label className="block text-sm font-bold mb-1">Name</label>
-              <input
-                type="text"
-                value={authForm.name}
-                onChange={(e) =>
-                  setAuthForm({ ...authForm, name: e.target.value })
-                }
-                className="w-full bg-surface-container-highest px-4 py-2 rounded-sm border-none focus:ring-2 focus:ring-primary/40 outline-none"
-                placeholder="Your name"
-                required={!isLogin}
-              />
-            </div>
-          )}
-          <div>
-            <label className="block text-sm font-bold mb-1">Email</label>
-            <input
-              type="email"
-              value={authForm.email}
-              onChange={(e) =>
-                setAuthForm({ ...authForm, email: e.target.value })
-              }
-              className="w-full bg-surface-container-highest px-4 py-2 rounded-sm border-none focus:ring-2 focus:ring-primary/40 outline-none"
-              placeholder="you@example.com"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-bold mb-1">Password</label>
-            <input
-              type="password"
-              value={authForm.password}
-              onChange={(e) =>
-                setAuthForm({ ...authForm, password: e.target.value })
-              }
-              className="w-full bg-surface-container-highest px-4 py-2 rounded-sm border-none focus:ring-2 focus:ring-primary/40 outline-none"
-              placeholder="••••••••"
-              required
-            />
-          </div>
-
-          {!isLogin && (
-            <div>
-              <label className="block text-sm font-bold mb-1">Role</label>
-              <select
-                value={authForm.role}
-                onChange={(e) =>
-                  setAuthForm({
-                    ...authForm,
-                    role: e.target.value as DisplayRole,
-                  })
-                }
-                className="w-full bg-surface-container-highest px-4 py-2 rounded-sm border-none focus:ring-2 focus:ring-primary/40 outline-none"
-              >
-                <option value="Resident">Resident</option>
-                <option value="Business Owner">Business Owner</option>
-                <option value="Community Organizer">Community Organizer</option>
-              </select>
-            </div>
-          )}
-
-          <div className="bg-surface-container-low p-4 rounded-lg flex items-start gap-3 text-sm text-on-surface-variant">
-            <span className="material-symbols-outlined text-tertiary mt-0.5">
-              cloud_sync
-            </span>
-            <p>
-              This screen now connects to the live GraphQL authentication flow
-              whenever the backend gateway is running.
-            </p>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-linear-to-r from-primary to-primary-dim text-on-primary py-3 rounded-full font-bold shadow-lg shadow-primary/20 active:scale-95 duration-200 mt-6 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+    <div className="min-h-screen bg-[#eaffea] flex items-center justify-center p-6 font-body">
+      <motion.div 
+        layout
+        className={`w-full ${isLogin ? 'max-w-md' : 'max-w-5xl'} bg-white/70 backdrop-blur-3xl rounded-[3rem] shadow-[0_40px_80px_-20px_rgba(14,58,32,0.15)] border border-white/50 overflow-hidden flex flex-col`}
+      >
+        {/* Toggle Header */}
+        <div className="flex border-b border-on-surface/5 p-2 bg-surface-container-lowest/50">
+          <button 
+            onClick={() => { setIsLogin(true); setError(""); }}
+            className={`flex-1 py-4 text-sm font-black uppercase tracking-widest rounded-2xl transition-all ${isLogin ? 'bg-primary text-on-primary shadow-xl scale-100' : 'text-on-surface/50 hover:bg-surface-container'}`}
           >
-            {loading && (
-              <div className="w-4 h-4 border-2 border-on-primary/30 border-t-on-primary rounded-full animate-spin"></div>
-            )}
-            {isLogin ? "Sign In" : "Create Account"}
+            Sign In
           </button>
-        </form>
-
-        <div className="mt-6 text-center">
-          <button
-            onClick={() => {
-              setIsLogin(!isLogin);
-              setError("");
-            }}
-            className="text-sm text-primary font-bold hover:underline"
-            type="button"
+          <button 
+            onClick={() => { setIsLogin(false); setError(""); }}
+            className={`flex-1 py-4 text-sm font-black uppercase tracking-widest rounded-2xl transition-all ${!isLogin ? 'bg-primary text-on-primary shadow-xl scale-100' : 'text-on-surface/50 hover:bg-surface-container'}`}
           >
-            {isLogin
-              ? "Need an account? Sign up"
-              : "Already have an account? Sign in"}
+            Create Account
           </button>
         </div>
-      </div>
+
+        <div className="flex flex-col lg:flex-row min-h-[600px]">
+          {/* Main Form Area */}
+          <div className={`p-10 lg:p-16 ${isLogin ? 'w-full' : 'lg:w-1/2 border-r border-on-surface/5'} flex flex-col justify-center`}>
+            <div className="mb-10 text-center lg:text-left">
+              <h1 className="text-4xl font-black text-on-surface font-headline italic tracking-tighter mb-2">
+                {isLogin ? "Welcome Back." : "The Digital Commons."}
+              </h1>
+              <p className="text-on-surface-variant font-medium">
+                {isLogin ? "Enter your credentials to connect with neighbors." : "Create your profile to start shaping your neighborhood."}
+              </p>
+            </div>
+
+            {error && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-8 p-4 bg-error-container/10 border border-error/30 rounded-2xl text-error text-sm font-bold flex items-center gap-3"
+              >
+                <span className="material-symbols-outlined text-lg">warning</span>
+                {error}
+              </motion.div>
+            )}
+
+            <form onSubmit={handleAuthSubmit} className="space-y-6">
+              {!isLogin && (
+                <div className="space-y-1">
+                  <label className="text-xs font-black uppercase tracking-widest text-on-surface/60 ml-1">Full Name</label>
+                  <input
+                    type="text"
+                    value={authForm.name}
+                    onChange={(e) => setAuthForm({ ...authForm, name: e.target.value })}
+                    className="w-full bg-surface-container-highest/50 px-6 py-4 rounded-3xl border-2 border-transparent focus:border-primary/20 focus:bg-white outline-none transition-all placeholder:text-on-surface/20 font-bold"
+                    placeholder="Enter your name"
+                    required
+                  />
+                </div>
+              )}
+              <div className="space-y-1">
+                <label className="text-xs font-black uppercase tracking-widest text-on-surface/60 ml-1">Email Address</label>
+                <input
+                  type="email"
+                  value={authForm.email}
+                  onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })}
+                  className="w-full bg-surface-container-highest/50 px-6 py-4 rounded-3xl border-2 border-transparent focus:border-primary/20 focus:bg-white outline-none transition-all placeholder:text-on-surface/20 font-bold"
+                  placeholder="name@neighborhood.com"
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-black uppercase tracking-widest text-on-surface/60 ml-1">Password</label>
+                <input
+                  type="password"
+                  value={authForm.password}
+                  onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
+                  className="w-full bg-surface-container-highest/50 px-6 py-4 rounded-3xl border-2 border-transparent focus:border-primary/20 focus:bg-white outline-none transition-all placeholder:text-on-surface/20 font-bold"
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-linear-to-r from-primary to-primary-dim text-on-primary py-5 rounded-full font-black text-lg shadow-2xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 mt-8"
+              >
+                {loading ? <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin" /> : null}
+                {isLogin ? "Sign In" : "Get Started"}
+              </button>
+            </form>
+          </div>
+
+          {/* Role Selection Beside Form (Signup Only) */}
+          {!isLogin && (
+            <div className="hidden lg:flex lg:w-1/2 p-16 flex-col justify-center bg-surface-container-lowest/30">
+              <div className="mb-10 text-center">
+                <h3 className="text-sm font-black text-primary tracking-[0.3em] uppercase mb-2">Select Your Lens</h3>
+                <p className="text-on-surface-variant font-medium">How will you participate today?</p>
+              </div>
+
+              <div className="grid gap-4">
+                {roles.map((role) => {
+                  const isActive = authForm.role === role.id;
+                  return (
+                    <button
+                      key={role.id}
+                      type="button"
+                      onClick={() => setAuthForm({ ...authForm, role: role.id })}
+                      className={`group p-8 rounded-4xl border-2 transition-all flex items-start gap-6 text-left ${
+                        isActive 
+                          ? 'border-primary bg-primary/5 shadow-xl scale-[1.02]' 
+                          : 'border-on-surface/5 bg-white/50 hover:border-primary/30 hover:bg-white shadow-sm'
+                      }`}
+                    >
+                      <div className={`p-4 rounded-2xl transition-colors ${isActive ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface/40 group-hover:bg-primary/20 group-hover:text-primary'}`}>
+                        <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: isActive ? "'FILL' 1" : "" }}>{role.icon}</span>
+                      </div>
+                      <div className="space-y-1">
+                        <h4 className={`font-black text-lg font-headline ${isActive ? 'text-primary' : 'text-on-surface'}`}>{role.id}</h4>
+                        <p className="text-xs text-on-surface-variant leading-relaxed font-medium">{role.desc}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </motion.div>
     </div>
   );
 }
