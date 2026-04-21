@@ -1,7 +1,4 @@
-# Link to Live Website
-```
-https://the-commons-shell.vercel.app/
-```
+# Link to Live Website — https://the-commons-shell.vercel.app/
 
 # The Commons — Community Engagement Platform
 
@@ -13,8 +10,9 @@ Built for **COMP 308 — Emerging Web Technologies** (Group 5).
 
 ## Architecture
 
-This project uses a **Micro-Frontend (MFE)** architecture powered by [Vite Module Federation](https://github.com/nicolo-ribaudo/vite-plugin-federation). Four independently deployable apps compose the UI at **runtime**:
+This project uses a **Micro-Frontend (MFE)** and **Microservices** architecture. The UI is composed at runtime using [Vite Module Federation](https://github.com/nicolo-ribaudo/vite-plugin-federation), while the backend consists of independent GraphQL services orchestrated by a Gateway.
 
+### Frontend MFEs
 | Package          | Port | Role                                   | Exposes                    |
 | ---------------- | ---- | -------------------------------------- | -------------------------- |
 | `shell/`         | 5173 | **Host** — Layout, routing, auth guard | —                          |
@@ -22,29 +20,14 @@ This project uses a **Micro-Frontend (MFE)** architecture powered by [Vite Modul
 | `mfe-community/` | 5175 | Community & Business Engagement        | `Feed`, `Help`, `Business` |
 | `mfe-events/`    | 5176 | Events & Administration                | `Events`                   |
 
-```
-frontend/
-├── package.json             # npm workspaces root
-├── shell/                   # 🏠 Host app
-│   └── src/
-│       ├── App.tsx          # React.lazy() imports from remotes
-│       ├── components/
-│       │   └── Layout.tsx   # Sidebar + TopBar + Mobile Nav
-│       └── pages/
-│           └── Landing.tsx  # Public landing page
-├── mfe-auth/                # 🔐 Auth MFE
-│   └── src/components/
-│       ├── Auth.tsx         # Login / Register
-│       └── Profile.tsx      # Profile view & edit
-├── mfe-community/           # 💬 Community MFE
-│   └── src/components/
-│       ├── Feed.tsx         # News & Discussions + Comments
-│       ├── Help.tsx         # Help Requests + Emergency Alerts
-│       └── Business.tsx     # Business Listings + Deals + Reviews
-└── mfe-events/              # 📅 Events MFE
-    └── src/components/
-        └── Events.tsx       # Organizer Hub + AI Timing + Volunteers
-```
+### Backend Services
+| Service           | Role                                           | Database        |
+| ----------------- | ---------------------------------------------- | --------------- |
+| `gateway/`        | **Unified API** — GraphQL Schema Stitching     | —               |
+| `auth-service/`   | JWT generation, user registration, role RBAC   | MongoDB (Auth)  |
+| `community-srv/`  | Social Feed, Help Hub, Notifications, Likes    | MongoDB (Comm)  |
+| `business-srv/`   | Business listings, Events, Volunteering        | MongoDB (Biz)   |
+| `ai-service/`     | Google Gemini integration (Summaries, Timing)  | —               |
 
 ---
 
@@ -52,15 +35,32 @@ frontend/
 
 | Layer             | Technology                                  |
 | ----------------- | ------------------------------------------- |
-| Framework         | React 19                                    |
-| Bundler           | Vite 6                                      |
-| Module Federation | `@originjs/vite-plugin-federation`          |
-| Styling           | Tailwind CSS v4 (Material 3 design tokens)  |
-| Animation         | Motion (Framer Motion)                      |
-| Typography        | Manrope + Be Vietnam Pro (Google Fonts)     |
-| Icons             | Material Symbols (variable font)            |
-| GraphQL Client    | Apollo Client (configured, pending backend) |
-| AI                | Google Gemini (pending backend integration) |
+| **Framework**     | React 19                                    |
+| **Bundler**       | Vite 6                                      |
+| **Module Fed.**   | `@originjs/vite-plugin-federation`          |
+| **Styling**       | Tailwind CSS v4 (Material 3 tokens)         |
+| **Animation**     | Motion (Framer Motion)                      |
+| **Icons/Fonts**   | Material Symbols + Manrope                  |
+| **GraphQL**       | Apollo Client & Apollo Server (v5)          |
+| **Database**      | MongoDB (Mongoose ODM)                      |
+| **AI**            | Google Gemini 3 Flash Preview                     |
+| **DevOps**        | GitHub Actions (CI/CD) + Google Cloud Run   |
+
+---
+
+## Features
+
+### ✅ Fully Implemented (Full Stack)
+
+| Feature               | Details                                                                    |
+| --------------------- | -------------------------------------------------------------------------- |
+| **Unified Auth**      | JWT-based login/register across all MFEs with Role-Based Access (RBAC)     |
+| **Social Feed**       | Community posts with **AI-generated summaries**, likes, and comments       |
+| **Neighborhood Help** | Help requests with persistence, urgency levels, and **Offer Help** actions |
+| **Notification Hub**  | Global news/alert system; notifications for likes, comments, and volunteers |
+| **Event Hub**         | Event creation with **AI Timing suggestions** and volunteer rosters        |
+| **Emergency Alerts**  | High-priority safety broadcasts with location-based triggers               |
+| **Local Hero AI**     | Automated matching between resident skills and community help requests     |
 
 ---
 
@@ -70,6 +70,7 @@ frontend/
 
 - **Node.js** ≥ 18
 - **npm** ≥ 9 (npm workspaces required)
+- **MongoDB** (Atlas or Local)
 
 ### Install
 
@@ -78,126 +79,47 @@ cd frontend
 npm install
 ```
 
-### Run (one command)
+### Run (Full Stack Local)
 
-```bash
-npm run start
-```
-
-This will:
-
-1. **Build** all 3 remote MFEs (`mfe-auth`, `mfe-community`, `mfe-events`)
-2. **Serve** each MFE's built assets via `vite preview` on ports 5174–5176
-3. **Start** the shell dev server with HMR on port 5173
+To run the entire ecosystem locally:
+1. Ensure all `.env` files are configured (see below).
+2. Start the backend services (Gateway + Microservices).
+3. Start the frontend:
+   ```bash
+   cd frontend
+   npm run start
+   ```
 
 Open **http://localhost:5173** in your browser.
-
-### Run (step by step)
-
-```bash
-# Build remote MFEs
-npm run build:remotes
-
-# In separate terminals:
-npm run preview -w mfe-auth        # → localhost:5174
-npm run preview -w mfe-community   # → localhost:5175
-npm run preview -w mfe-events      # → localhost:5176
-npm run dev -w shell               # → localhost:5173
-```
-
-### Production Build
-
-```bash
-npm run build    # Builds all 4 packages
-```
-
----
-
-## Features
-
-### ✅ Implemented (Frontend)
-
-| Feature               | Components                                                                 |
-| --------------------- | -------------------------------------------------------------------------- |
-| **Auth**              | Login / Register with validation, role selection                           |
-| **Community Feed**    | Post creation (News/Discussion), AI summaries, threaded comments           |
-| **Neighborhood Help** | Help request creation, category & urgency selectors, AI volunteer matching |
-| **Emergency Alerts**  | Alert broadcasting with type, location, and urgency display                |
-| **Local Businesses**  | Business listing, deal/promotion creation, review sentiment, owner reply   |
-| **Events**            | Event creation, AI timing suggestions, volunteer matching & invite         |
-| **Profile**           | View & edit profile, interests, location                                   |
-
-### 🔜 Pending (Backend)
-
-- GraphQL API (Express + Apollo Server)
-- MongoDB data persistence
-- JWT Authentication
-- Google Gemini AI integration (summaries, sentiment, matching)
-
----
-
-## Scripts Reference
-
-| Script                  | Description                                       |
-| ----------------------- | ------------------------------------------------- |
-| `npm run start`         | Build remotes + launch all 4 servers              |
-| `npm run dev`           | Shell dev server only (remotes must be pre-built) |
-| `npm run build:remotes` | Build all 3 MFEs                                  |
-| `npm run build`         | Full production build (all 4 packages)            |
 
 ---
 
 ## Environment Variables
 
-Each backend service and the gateway requires a `.env` file for configuration. Templates are provided as `.env.example` in each directory.
-
-### Quick Setup
-
-For each directory containing a `.env.example`, copy it to `.env`:
-
-```bash
-# Example for AI Service
-cp services/ai-service/.env.example services/ai-service/.env
+### Frontend (`frontend/shell/.env`)
+```env
+VITE_GATEWAY_URL=http://localhost:4000/graphql
+VITE_MFE_AUTH_URL=http://localhost:5174/assets/remoteEntry.js
+VITE_MFE_COMMUNITY_URL=http://localhost:5175/assets/remoteEntry.js
+VITE_MFE_EVENTS_URL=http://localhost:5176/assets/remoteEntry.js
 ```
 
-### Required Keys
-
-| Service | File | Key Variables |
+### Backend Services
+| Service | File | Required Keys |
 | :--- | :--- | :--- |
-| **Gateway** | `gateway/.env` | Service URLs, Port (4000) |
+| **Gateway** | `gateway/.env` | `AUTH_SERVICE_URL`, `COMMUNITY_SERVICE_URL`, etc. |
 | **AI Service** | `services/ai-service/.env` | `GEMINI_API_KEY` |
-| **Auth Service** | `services/auth-service/.env` | `MONGO_URI`, `JWT_SECRET` |
-| **Business/Events** | `services/business-.../.env` | `MONGO_URI`, `JWT_SECRET` |
-| **Community** | `services/community-.../.env` | `MONGO_URI`, `JWT_SECRET` |
-
-> [!TIP]
-> Make sure to update the `JWT_SECRET` with a secure random string and provide your own `GEMINI_API_KEY` in the AI service. **Important: The `JWT_SECRET` must be the exact same string across all services** so they can all verify the same tokens.
+| **Microservices** | `services/.../.env` | `MONGO_URI`, `JWT_SECRET` |
 
 ---
 
 ## Production Setup
 
-### 1. Database (MongoDB Atlas)
-- Create a free cluster on [MongoDB Atlas](https://www.mongodb.com/cloud/atlas).
-- Network Access: Allow `0.0.0.0/0` (or specific IPs of GCP/Vercel).
-- Get your connection string.
+### 1. Backend (Google Cloud Run)
+The included GitHub Action (`.github/workflows/deploy-backend.yml`) automatically builds and deploys all 5 services to Google Cloud Run on every push to `main`.
 
-### 2. Backend (Google Cloud Run)
-- Create a GCP Project and enable **Cloud Run Admin API** and **Artifact Registry API**.
-- Create a Service Account with **Cloud Run Admin** and **GitHub Actions** roles.
-- Add these secrets to your GitHub repository:
-  - `GCP_PROJECT_ID`: Your GCP project ID.
-  - `GCP_SA_KEY`: The JSON key file for your service account.
-
-The included GitHub Action (`.github/workflows/deploy-backend.yml`) will automatically build and deploy all services on every push to `main`.
-
-### 3. Frontend (Vercel)
-- Import your repository into **Vercel**.
-- Vercel will detect 4 potential projects. Deploy them individually using these settings:
-  - **Framework Preset**: Vite
-  - **Root Directory**: `frontend/shell`, `frontend/mfe-auth`, etc.
-  - **Environment Variables**:
-    - For `shell`: Set `VITE_MFE_AUTH_URL`, `VITE_MFE_COMMUNITY_URL`, and `VITE_MFE_EVENTS_URL` to the production Vercel URLs of your remotes.
+### 2. Frontend (Vercel)
+Deploy the `shell` and remotes individually to Vercel. Ensure the `shell` environment variables point to the production Vercel URLs of the remotes.
 
 ---
 
