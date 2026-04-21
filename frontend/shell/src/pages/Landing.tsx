@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
+import heroBg from '../assets/hero-bg.png';
 
 export default function Landing() {
   const [activeSection, setActiveSection] = useState('');
@@ -79,52 +80,87 @@ export default function Landing() {
         </div>
       </header>
       
-      <main className="pt-24 pb-20">
-        {/* Hero Section */}
-        <section className="px-6 md:px-12 py-16 lg:py-24 max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <motion.div 
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              className="space-y-8"
-            >
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary-container/30 text-on-primary-container rounded-full text-sm font-semibold">
-                <span className="w-2 h-2 rounded-full bg-tertiary"></span>
-                Welcome to the neighborhood
-              </div>
-              <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tighter leading-tight text-on-surface font-headline">
-                The Heart of <br /><span className="bg-linear-to-r from-primary to-primary-dim bg-clip-text text-transparent">Your Community.</span>
-              </h1>
-              <p className="text-xl text-on-surface-variant max-w-lg leading-relaxed">
-                A modern digital commons designed for vibrant participation. Connect with neighbors, grow local businesses, and organize meaningful change in one harmonious place.
-              </p>
-              <div className="flex flex-wrap gap-4">
-                <Link to="/auth" className="px-8 py-4 bg-linear-to-r from-primary to-primary-dim text-on-primary font-bold rounded-full shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
-                  Join the Commons
-                </Link>
-                <button className="px-8 py-4 bg-secondary-container text-on-secondary-container font-bold rounded-full hover:bg-secondary-container/80 transition-all">
-                  Explore Map
-                </button>
-              </div>
-            </motion.div>
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9, rotate: -2 }}
-              animate={{ opacity: 1, scale: 1, rotate: 0 }}
-              transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
-              className="relative"
-            >
-              <div className="rounded-4xl overflow-hidden shadow-2xl rotate-2">
-                <img alt="Community gathering" className="aspect-video object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCG7Npa7rmnzcPkNmFjfEbCWljivasSBAH6rNITeypFMmqeKZvPHevxqH6zSAnP5nywAss6NeTxgV4xBKZbPC4ZTcfIwPv9NOorzqUJvixTkUpx_7zXLHD2UqmT8GIfxDUeKZk5hrI6z6JwmeA_nH8C54mW11s9f3Gm-n5R8iP6Tgytkouk9VmV7xRxXuEWfj6yMtFi8mf2fO5WGKB1Uek6khIkseg_Od8O-vvJmXl1AbCpE0tcDp8ZNptBHnszvItHwVlg0Qnqxlw" />
-              </div>
-              <div className="absolute -bottom-8 -left-8 bg-surface-container-lowest p-6 rounded-2xl shadow-xl max-w-xs -rotate-3">
-                <div className="flex gap-2 items-center mb-2">
-                  <span className="material-symbols-outlined text-tertiary" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
-                  <span className="text-sm font-bold text-tertiary uppercase tracking-widest">AI Summary</span>
+      <main className="relative">
+        {/* Premium Hero Section */}
+        <section className="relative min-h-[90vh] flex items-center overflow-hidden">
+          {/* Background Image with sophisticated overlay */}
+          <div className="absolute inset-0 z-0">
+            <img 
+              src={heroBg} 
+              alt="Community Background" 
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-linear-to-b from-surface/90 via-surface/40 to-surface"></div>
+            <div className="absolute inset-0 bg-linear-to-r from-surface/80 via-transparent to-transparent"></div>
+          </div>
+
+          <div className="relative z-10 px-6 md:px-12 py-16 lg:py-24 max-w-7xl mx-auto w-full">
+            <div className="grid lg:grid-cols-2 gap-16 items-center">
+              <motion.div 
+                initial={{ opacity: 0, x: -50 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+                className="space-y-10"
+              >
+                <div className="inline-flex items-center gap-2 px-4 py-2 backdrop-blur-md bg-primary-container/20 border border-primary-container/30 text-on-primary-container rounded-full text-sm font-bold tracking-wide">
+                  <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
+                  WELCOME TO THE NEIGHBORHOOD
                 </div>
-                <p className="text-sm text-on-surface leading-snug">"The local farmer's market proposal received 94% positive sentiment. Main excitement: organic produce access."</p>
-              </div>
-            </motion.div>
+                <h1 className="text-6xl md:text-9xl font-black tracking-tight leading-[0.85] text-on-surface font-headline">
+                  The Heart of <br />
+                  <span className="bg-linear-to-r from-primary to-primary-dim bg-clip-text text-transparent italic">
+                    Your Community.
+                  </span>
+                </h1>
+                <p className="text-2xl text-on-surface-variant/90 max-w-lg leading-relaxed font-medium">
+                  A modern digital commons designed for vibrant participation. Connect, grow, and organize in one harmonious place.
+                </p>
+                <div className="flex flex-wrap gap-6 pt-4">
+                  <Link to="/auth" className="px-10 py-5 bg-linear-to-r from-primary to-primary-dim text-on-primary font-black rounded-full shadow-2xl shadow-primary/40 hover:scale-105 active:scale-95 transition-all text-lg">
+                    Join the Commons
+                  </Link>
+                  <button className="px-10 py-5 backdrop-blur-lg bg-surface/40 border border-on-surface/10 text-on-surface font-black rounded-full hover:bg-surface/60 transition-all text-lg shadow-xl">
+                    Explore Map
+                  </button>
+                </div>
+              </motion.div>
+
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.8, rotate: 5 }}
+                animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                transition={{ duration: 1.2, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                className="relative hidden lg:block"
+              >
+                <div className="relative group">
+                  <div className="absolute -inset-4 bg-primary/20 blur-3xl rounded-full opacity-50 group-hover:opacity-80 transition-opacity"></div>
+                  <div className="relative rounded-[3rem] overflow-hidden shadow-2xl border-8 border-surface-container-lowest/50 backdrop-blur-3xl">
+                    <img 
+                      alt="Community gathering" 
+                      className="aspect-square object-cover" 
+                      src="https://lh3.googleusercontent.com/aida-public/AB6AXuCG7Npa7rmnzcPkNmFjfEbCWljivasSBAH6rNITeypFMmqeKZvPHevxqH6zSAnP5nywAss6NeTxgV4xBKZbPC4ZTcfIwPv9NOorzqUJvixTkUpx_7zXLHD2UqmT8GIfxDUeKZk5hrI6z6JwmeA_nH8C54mW11s9f3Gm-n5R8iP6Tgytkouk9VmV7xRxXuEWfj6yMtFi8mf2fO5WGKB1Uek6khIkseg_Od8O-vvJmXl1AbCpE0tcDp8ZNptBHnszvItHwVlg0Qnqxlw" 
+                    />
+                  </div>
+                  
+                  {/* Glassmorphic AI Card */}
+                  <motion.div 
+                    initial={{ x: 20, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: 1, duration: 0.8 }}
+                    className="absolute -bottom-10 -left-16 backdrop-blur-2xl bg-surface/80 p-10 rounded-[2.5rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] max-w-sm -rotate-3 border border-white/50"
+                  >
+                    <div className="flex gap-3 items-center mb-4">
+                      <div className="bg-tertiary/10 p-2 rounded-xl">
+                        <span className="material-symbols-outlined text-tertiary" style={{ fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
+                      </div>
+                      <span className="text-xs font-black text-tertiary uppercase tracking-[0.2em]">AI Insights</span>
+                    </div>
+                    <p className="text-lg text-on-surface font-bold leading-tight">
+                      "94% of neighbors are excited about the upcoming organic market. High demand for locally grown produce."
+                    </p>
+                  </motion.div>
+                </div>
+              </motion.div>
+            </div>
           </div>
         </section>
 
